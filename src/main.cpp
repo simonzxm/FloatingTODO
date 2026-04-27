@@ -1,6 +1,5 @@
 #include "controller/TodoController.h"
 #include "repository/TodoRepository.h"
-#include "service/LaunchActionService.h"
 #include "service/TodoService.h"
 #include "view/MainWindow.h"
 
@@ -24,8 +23,7 @@ int main(int argc, char *argv[])
     }
 
     TodoService todoService(repository);
-    LaunchActionService launchService;
-    TodoController controller(todoService, launchService);
+    TodoController controller(todoService);
 
     MainWindow window(&controller);
     window.resize(900, 600);

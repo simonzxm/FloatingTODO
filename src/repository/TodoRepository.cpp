@@ -28,6 +28,10 @@ bool TodoRepository::initialize()
         return false;
     }
 
+    if (!migrateLegacySchemaIfNeeded()) {
+        return false;
+    }
+
     QSqlQuery query(m_db);
     return query.exec(
         "CREATE TABLE IF NOT EXISTS todos ("
@@ -36,9 +40,6 @@ bool TodoRepository::initialize()
         "title TEXT NOT NULL,"
         "due_at TEXT NULL,"
         "completed INTEGER NOT NULL DEFAULT 0,"
-        "launch_type TEXT NOT NULL DEFAULT 'none',"
-        "launch_target TEXT,"
-        "launch_display_name TEXT,"
         "created_at TEXT NOT NULL,"
         "updated_at TEXT NOT NULL"
         ")"
@@ -73,16 +74,13 @@ int TodoRepository::add(const TodoItem &item)
     QSqlQuery query(m_db);
     query.prepare(
         "INSERT INTO todos "
-        "(parent_id, title, due_at, completed, launch_type, launch_target, launch_display_name, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "(parent_id, title, due_at, completed, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)"
     );
     query.addBindValue(item.parentId >= 0 ? QVariant(item.parentId) : QVariant());
     query.addBindValue(item.title);
     query.addBindValue(item.dueAt.isValid() ? QVariant(item.dueAt.toUTC().toString(Qt::ISODate)) : QVariant());
     query.addBindValue(item.completed ? 1 : 0);
-    query.addBindValue(typeToString(item.launchAction.type));
-    query.addBindValue(item.launchAction.target);
-    query.addBindValue(item.launchAction.displayName);
     query.addBindValue(now.toString(Qt::ISODate));
     query.addBindValue(now.toString(Qt::ISODate));
     if (!query.exec()) {
@@ -96,15 +94,12 @@ bool TodoRepository::update(const TodoItem &item)
     QSqlQuery query(m_db);
     query.prepare(
         "UPDATE todos SET parent_id = ?, title = ?, due_at = ?, completed = ?, "
-        "launch_type = ?, launch_target = ?, launch_display_name = ?, updated_at = ? WHERE id = ?"
+        "updated_at = ? WHERE id = ?"
     );
     query.addBindValue(item.parentId >= 0 ? QVariant(item.parentId) : QVariant());
     query.addBindValue(item.title);
     query.addBindValue(item.dueAt.isValid() ? QVariant(item.dueAt.toUTC().toString(Qt::ISODate)) : QVariant());
     query.addBindValue(item.completed ? 1 : 0);
-    query.addBindValue(typeToString(item.launchAction.type));
-    query.addBindValue(item.launchAction.target);
-    query.addBindValue(item.launchAction.displayName);
     query.addBindValue(QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
     query.addBindValue(item.id);
     return query.exec();
@@ -141,6 +136,55 @@ bool TodoRepository::removeSubtree(int id)
     return remove(id);
 }
 
+bool TodoRepository::migrateLegacySchemaIfNeeded()
+{
+    QSqlQuery columnsQuery(m_db);
+    if (!columnsQuery.exec("PRAGMA table_info(todos)")) {
+        return false;
+    }
+
+    QStringList columns;
+    while (columnsQuery.next()) {
+        columns.push_back(columnsQuery.value("name").toString());
+    }
+
+    if (columns.isEmpty()
+        || (!columns.contains("launch_type")
+            && !columns.contains("launch_target")
+            && !columns.contains("launch_display_name"))) {
+        return true;
+    }
+
+    QSqlQuery query(m_db);
+    if (!query.exec("BEGIN TRANSACTION")) {
+        return false;
+    }
+    const bool ok =
+        query.exec(
+            "CREATE TABLE todos_new ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "parent_id INTEGER NULL,"
+            "title TEXT NOT NULL,"
+            "due_at TEXT NULL,"
+            "completed INTEGER NOT NULL DEFAULT 0,"
+            "created_at TEXT NOT NULL,"
+            "updated_at TEXT NOT NULL"
+            ")"
+        )
+        && query.exec(
+            "INSERT INTO todos_new (id, parent_id, title, due_at, completed, created_at, updated_at) "
+            "SELECT id, parent_id, title, due_at, completed, created_at, updated_at FROM todos"
+        )
+        && query.exec("DROP TABLE todos")
+        && query.exec("ALTER TABLE todos_new RENAME TO todos");
+
+    if (ok) {
+        return query.exec("COMMIT");
+    }
+    query.exec("ROLLBACK");
+    return false;
+}
+
 TodoItem TodoRepository::itemFromQuery(const QSqlQuery &query) const
 {
     TodoItem item;
@@ -149,44 +193,7 @@ TodoItem TodoRepository::itemFromQuery(const QSqlQuery &query) const
     item.title = query.value("title").toString();
     item.dueAt = QDateTime::fromString(query.value("due_at").toString(), Qt::ISODate);
     item.completed = query.value("completed").toInt() != 0;
-    item.launchAction.type = typeFromString(query.value("launch_type").toString());
-    item.launchAction.target = query.value("launch_target").toString();
-    item.launchAction.displayName = query.value("launch_display_name").toString();
     item.createdAt = QDateTime::fromString(query.value("created_at").toString(), Qt::ISODate);
     item.updatedAt = QDateTime::fromString(query.value("updated_at").toString(), Qt::ISODate);
     return item;
-}
-
-QString TodoRepository::typeToString(LaunchActionType type) const
-{
-    switch (type) {
-    case LaunchActionType::Url:
-        return "url";
-    case LaunchActionType::File:
-        return "file";
-    case LaunchActionType::Folder:
-        return "folder";
-    case LaunchActionType::Application:
-        return "application";
-    case LaunchActionType::None:
-        return "none";
-    }
-    return "none";
-}
-
-LaunchActionType TodoRepository::typeFromString(const QString &value) const
-{
-    if (value == "url") {
-        return LaunchActionType::Url;
-    }
-    if (value == "file") {
-        return LaunchActionType::File;
-    }
-    if (value == "folder") {
-        return LaunchActionType::Folder;
-    }
-    if (value == "application") {
-        return LaunchActionType::Application;
-    }
-    return LaunchActionType::None;
 }

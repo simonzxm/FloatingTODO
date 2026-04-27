@@ -5,7 +5,6 @@
 #include <QDialog>
 
 class QCheckBox;
-class QComboBox;
 class QDateTimeEdit;
 class QDialogButtonBox;
 class QLineEdit;
@@ -20,7 +19,6 @@ public:
 
     QString title() const;
     QDateTime dueAt() const;
-    LaunchAction launchAction() const;
 
 private slots:
     void accept() override;
@@ -28,14 +26,9 @@ private slots:
 private:
     void setupUi();
     void fillFromItem(const TodoItem &item);
-    LaunchActionType currentLaunchType() const;
-    void setCurrentLaunchType(LaunchActionType type);
 
     QLineEdit *m_titleEdit = nullptr;
     QCheckBox *m_dueEnabledCheck = nullptr;
     QDateTimeEdit *m_dueEdit = nullptr;
-    QComboBox *m_launchTypeCombo = nullptr;
-    QLineEdit *m_launchTargetEdit = nullptr;
-    QLineEdit *m_launchDisplayNameEdit = nullptr;
     QDialogButtonBox *m_buttons = nullptr;
 };

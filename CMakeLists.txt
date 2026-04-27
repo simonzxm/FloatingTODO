@@ -19,16 +19,12 @@ get_filename_component(CXX_COMPILER_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
 set(FLOATINGTODO_TEST_PATH "${QT_BIN_DIR}\\;${CXX_COMPILER_DIR}\\;$ENV{PATH}")
 
 set(FLOATINGTODO_CORE_SOURCES
-    src/model/LaunchAction.h
-    src/model/LaunchAction.cpp
     src/model/TodoItem.h
     src/model/TodoItem.cpp
     src/repository/TodoRepository.h
     src/repository/TodoRepository.cpp
     src/service/TodoService.h
     src/service/TodoService.cpp
-    src/service/LaunchActionService.h
-    src/service/LaunchActionService.cpp
     src/controller/TodoController.h
     src/controller/TodoController.cpp
 )
@@ -76,4 +72,3 @@ endfunction()
 add_floatingtodo_test(test_models tests/TestModels.cpp)
 add_floatingtodo_test(test_todo_repository tests/TestTodoRepository.cpp)
 add_floatingtodo_test(test_todo_service tests/TestTodoService.cpp)
-add_floatingtodo_test(test_launch_action_service tests/TestLaunchActionService.cpp)

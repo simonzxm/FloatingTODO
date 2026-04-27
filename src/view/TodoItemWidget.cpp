@@ -32,13 +32,11 @@ TodoItemWidget::TodoItemWidget(const TodoItem &item, const ChildStats &stats, in
     statsLabel->setMinimumWidth(90);
 
     auto *toggleButton = new QPushButton(item.completed ? QStringLiteral("取消完成") : QStringLiteral("完成"), this);
-    auto *launchButton = new QPushButton(item.launchAction.buttonText(), this);
     auto *addChildButton = new QPushButton(QStringLiteral("新增子任务"), this);
     auto *editButton = new QPushButton(QStringLiteral("编辑"), this);
     auto *deleteButton = new QPushButton(QStringLiteral("删除"), this);
 
     connect(toggleButton, &QPushButton::clicked, this, [this]() { emit toggleRequested(m_id); });
-    connect(launchButton, &QPushButton::clicked, this, [this]() { emit launchRequested(m_id); });
     connect(addChildButton, &QPushButton::clicked, this, [this]() { emit addChildRequested(m_id); });
     connect(editButton, &QPushButton::clicked, this, [this]() { emit editRequested(m_id); });
     connect(deleteButton, &QPushButton::clicked, this, [this]() { emit deleteRequested(m_id); });
@@ -48,7 +46,6 @@ TodoItemWidget::TodoItemWidget(const TodoItem &item, const ChildStats &stats, in
     layout->addWidget(dueLabel);
     layout->addWidget(statsLabel);
     layout->addWidget(toggleButton);
-    layout->addWidget(launchButton);
     layout->addWidget(addChildButton);
     layout->addWidget(editButton);
     layout->addWidget(deleteButton);

@@ -47,11 +47,6 @@ void TodoListView::renderItem(const TodoItem &item, int depth)
             m_controller->toggleTaskCompleted(id);
         }
     });
-    connect(widget, &TodoItemWidget::launchRequested, this, [this](int id) {
-        if (m_controller) {
-            m_controller->launchTask(id);
-        }
-    });
     connect(widget, &TodoItemWidget::addChildRequested, this, &TodoListView::openAddChildDialog);
     connect(widget, &TodoItemWidget::editRequested, this, &TodoListView::openEditDialog);
     connect(widget, &TodoItemWidget::deleteRequested, this, [this](int id) {
@@ -111,7 +106,7 @@ void TodoListView::openAddChildDialog(int parentId)
     TodoEditorDialog dialog(this);
     dialog.setWindowTitle(QStringLiteral("新增子任务"));
     if (dialog.exec() == QDialog::Accepted) {
-        m_controller->addChildTask(parentId, dialog.title(), dialog.dueAt(), dialog.launchAction());
+        m_controller->addChildTask(parentId, dialog.title(), dialog.dueAt());
     }
 }
 
@@ -128,6 +123,6 @@ void TodoListView::openEditDialog(int id)
     TodoEditorDialog dialog(*task, this);
     dialog.setWindowTitle(QStringLiteral("编辑任务"));
     if (dialog.exec() == QDialog::Accepted) {
-        m_controller->editTask(id, dialog.title(), dialog.dueAt(), dialog.launchAction());
+        m_controller->editTask(id, dialog.title(), dialog.dueAt());
     }
 }

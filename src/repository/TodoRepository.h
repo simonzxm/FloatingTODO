@@ -24,9 +24,8 @@ public:
     bool removeSubtree(int id);
 
 private:
+    bool migrateLegacySchemaIfNeeded();
     TodoItem itemFromQuery(const QSqlQuery &query) const;
-    QString typeToString(LaunchActionType type) const;
-    LaunchActionType typeFromString(const QString &value) const;
 
     QString m_connectionName;
     QSqlDatabase m_db;

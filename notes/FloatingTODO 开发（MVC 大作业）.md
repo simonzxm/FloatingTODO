@@ -7,7 +7,7 @@
 
 第一阶段采用手写 MVC：
 
-- Model 层：`TodoItem`、`LaunchAction`、`TodoRepository`、`TodoService`、`LaunchActionService`
+- Model 层：`TodoItem`、`TodoRepository`、`TodoService`
 - Controller 层：`TodoController`
 - View 层：简陋 Qt Widgets，包括 `MainWindow`、`TodoListView`、`TodoItemWidget`、`TodoEditorDialog`
 

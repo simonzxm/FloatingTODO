@@ -29,10 +29,10 @@ private slots:
 
     void createRootAndChildTask()
     {
-        const int rootId = m_service->createTask(-1, "根任务", QDateTime(), LaunchAction());
+        const int rootId = m_service->createTask(-1, "根任务", QDateTime());
         QVERIFY(rootId > 0);
 
-        const int childId = m_service->createTask(rootId, "子任务", QDateTime(), LaunchAction());
+        const int childId = m_service->createTask(rootId, "子任务", QDateTime());
         QVERIFY(childId > 0);
 
         const auto children = m_repo->childrenOf(rootId);
@@ -42,7 +42,7 @@ private slots:
 
     void toggleCompletedOnlyChangesCurrentTask()
     {
-        const int id = m_service->createTask(-1, "任务", QDateTime(), LaunchAction());
+        const int id = m_service->createTask(-1, "任务", QDateTime());
         QVERIFY(m_service->toggleCompleted(id));
         QVERIFY(m_repo->findById(id)->completed);
         QVERIFY(m_service->toggleCompleted(id));
@@ -51,10 +51,10 @@ private slots:
 
     void childStatsCountsDirectChildrenOnly()
     {
-        const int rootId = m_service->createTask(-1, "根任务", QDateTime(), LaunchAction());
-        const int childA = m_service->createTask(rootId, "子任务 A", QDateTime(), LaunchAction());
-        m_service->createTask(rootId, "子任务 B", QDateTime(), LaunchAction());
-        const int grandChild = m_service->createTask(childA, "孙任务", QDateTime(), LaunchAction());
+        const int rootId = m_service->createTask(-1, "根任务", QDateTime());
+        const int childA = m_service->createTask(rootId, "子任务 A", QDateTime());
+        m_service->createTask(rootId, "子任务 B", QDateTime());
+        const int grandChild = m_service->createTask(childA, "孙任务", QDateTime());
 
         QVERIFY(m_service->toggleCompleted(childA));
         QVERIFY(m_service->toggleCompleted(grandChild));
@@ -66,8 +66,8 @@ private slots:
 
     void loadTaskTreeBuildsNestedChildren()
     {
-        const int rootId = m_service->createTask(-1, "根任务", QDateTime(), LaunchAction());
-        m_service->createTask(rootId, "子任务", QDateTime(), LaunchAction());
+        const int rootId = m_service->createTask(-1, "根任务", QDateTime());
+        m_service->createTask(rootId, "子任务", QDateTime());
 
         const auto tree = m_service->loadTaskTree();
         QCOMPARE(tree.size(), 1);

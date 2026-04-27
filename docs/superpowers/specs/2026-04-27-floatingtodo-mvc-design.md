@@ -2,7 +2,7 @@
 
 ## 1. 项目目标
 
-FloatingTODO 是一个基于 Qt 的桌面待办事项组件。第一阶段目标不是追求复杂 UI 和动画，而是先完成一个清晰、可读、可扩展的 MVC 架构：
+FloatingTODO 是一个基于 Qt 的桌面待办事项组件。第一阶段目标是完成一个清晰、可读、可扩展的 MVC 骨架，而不是追求复杂 UI 和动画。
 
 - 模型层负责表达任务、持久化数据和业务规则。
 - 控制层负责接收视图层的用户意图，并协调模型层完成操作。
@@ -34,10 +34,8 @@ SQLite
 ```text
 Model 层
 - TodoItem：任务实体
-- LaunchAction：启动动作实体
 - TodoRepository：SQLite 读写
 - TodoService：任务业务规则
-- LaunchActionService：打开网页、文件、文件夹、应用程序
 
 Controller 层
 - TodoController：View 的唯一业务入口
@@ -58,8 +56,6 @@ src/
   model/
     TodoItem.h
     TodoItem.cpp
-    LaunchAction.h
-    LaunchAction.cpp
 
   repository/
     TodoRepository.h
@@ -68,8 +64,6 @@ src/
   service/
     TodoService.h
     TodoService.cpp
-    LaunchActionService.h
-    LaunchActionService.cpp
 
   controller/
     TodoController.h
@@ -88,7 +82,7 @@ src/
 
 ## 4. 任务模型
 
-第一版砍掉任务自身进度条，只保留完成/未完成状态。
+第一版任务只保留完成/未完成状态，不包含启动动作，也不包含任务自身进度条。
 
 ```text
 TodoItem
@@ -97,58 +91,25 @@ TodoItem
 - title
 - dueAt
 - completed
-- launchAction
 - createdAt
 - updatedAt
+- children
 ```
 
 字段说明：
 
 - `id`：任务唯一标识。
-- `parentId`：父任务 id。为空表示顶层任务。
+- `parentId`：父任务 id。为空或 `-1` 表示顶层任务。
 - `title`：任务标题，必填。
 - `dueAt`：截止时间，可为空。
 - `completed`：任务自身是否完成。
-- `launchAction`：可选启动动作。
 - `createdAt`：创建时间。
 - `updatedAt`：更新时间。
+- `children`：由 Service 组装出的子任务列表。
 
 任务支持任意多级嵌套。
 
-## 5. 启动动作模型
-
-每个任务可以绑定一个启动动作，用来帮助用户从待办事项直接进入工作现场。
-
-```text
-LaunchAction
-- type
-- target
-- displayName
-```
-
-启动动作类型：
-
-```text
-None
-Url
-File
-Folder
-Application
-```
-
-字段说明：
-
-- `type`：启动动作类型。
-- `target`：URL、本地文件路径、文件夹路径或应用程序路径。
-- `displayName`：启动按钮显示名，可为空。为空时 View 可以显示默认文字“启动”。
-
-执行规则：
-
-- `Url`、`File`、`Folder` 使用 `QDesktopServices::openUrl()`。
-- `Application` 使用 `QProcess::startDetached()`。
-- 执行失败时返回错误信息，由 Controller 通知 View 显示。
-
-## 6. SQLite 数据库设计
+## 5. SQLite 数据库设计
 
 第一版使用一张 `todos` 表保存任务。
 
@@ -159,9 +120,6 @@ todos
 - title TEXT NOT NULL
 - due_at TEXT NULL
 - completed INTEGER NOT NULL DEFAULT 0
-- launch_type TEXT NOT NULL DEFAULT 'none'
-- launch_target TEXT
-- launch_display_name TEXT
 - created_at TEXT NOT NULL
 - updated_at TEXT NOT NULL
 ```
@@ -172,8 +130,11 @@ todos
 - 顶层任务的 `parent_id` 为空。
 - 子任务统计不单独存表字段，而是在需要展示时动态计算。
 - 任务自身没有进度字段，避免模型复杂化。
+- 任务没有启动动作字段，第一阶段聚焦待办事项本体。
 
-## 7. 核心业务规则
+如果本地存在早期带启动动作字段的旧表，Repository 初始化时会迁移为当前干净 schema，只保留任务核心字段。
+
+## 6. 核心业务规则
 
 1. 任务只有完成和未完成两种状态。
 2. 任务支持任意层级嵌套。
@@ -197,9 +158,9 @@ todos
 
 这里的 `2/3` 只统计“信息科学大作业”的直接子任务，不统计更深层后代任务。
 
-## 8. Repository 设计
+## 7. Repository 设计
 
-`TodoRepository` 只负责数据库读写，不处理业务规则，不打开文件或网页。
+`TodoRepository` 只负责数据库读写，不处理业务规则。
 
 建议接口：
 
@@ -218,11 +179,12 @@ TodoRepository
 职责边界：
 
 - 负责创建 SQLite 表。
+- 负责迁移旧 schema。
 - 负责插入、查询、更新、删除任务。
 - 负责根据 `parent_id` 查询子任务。
 - 可以提供递归删除接口，但不决定什么时候删除。
 
-## 9. Service 设计
+## 8. Service 设计
 
 `TodoService` 负责待办任务的业务规则。
 
@@ -231,8 +193,8 @@ TodoRepository
 ```text
 TodoService
 - loadTaskTree()
-- createTask(parentId, title, dueAt, launchAction)
-- updateTask(id, title, dueAt, launchAction)
+- createTask(parentId, title, dueAt)
+- updateTask(id, title, dueAt)
 - deleteTask(id)
 - toggleCompleted(id)
 - childStats(id)
@@ -247,23 +209,7 @@ TodoService
 - 计算直接子任务完成数量和总数量。
 - 组装 View 需要的任务树数据。
 
-`LaunchActionService` 负责启动动作。
-
-建议接口：
-
-```text
-LaunchActionService
-- launch(action) -> LaunchResult
-```
-
-`LaunchResult` 应表达：
-
-```text
-- success
-- message
-```
-
-## 10. Controller 设计
+## 9. Controller 设计
 
 `TodoController` 是 View 的唯一业务入口。View 不应该直接调用 Repository 或 Service。
 
@@ -272,12 +218,11 @@ LaunchActionService
 ```text
 TodoController
 - refresh()
-- addRootTask(...)
-- addChildTask(parentId, ...)
-- editTask(id, ...)
+- addRootTask(title, dueAt)
+- addChildTask(parentId, title, dueAt)
+- editTask(id, title, dueAt)
 - deleteTask(id)
 - toggleTaskCompleted(id)
-- launchTask(id)
 ```
 
 建议信号：
@@ -291,11 +236,11 @@ infoOccurred(message)
 Controller 职责：
 
 - 接收 View 的用户意图。
-- 调用 TodoService 或 LaunchActionService。
+- 调用 TodoService。
 - 操作完成后刷新任务树。
 - 将错误或提示信息转成信号通知 View。
 
-## 11. 第一版 View 设计
+## 10. 第一版 View 设计
 
 第一版视图使用 Qt Widgets 手写，追求简单可用，不追求美观和动画。
 
@@ -317,15 +262,12 @@ TodoItemWidget
 - 显示截止时间
 - 显示完成状态
 - 有子任务时显示“已完成直接子任务数 / 直接子任务总数”
-- 提供完成/取消完成、启动、新增子任务、编辑、删除按钮
+- 提供完成/取消完成、新增子任务、编辑、删除按钮
 
 TodoEditorDialog
 - 新建和编辑任务共用
 - 输入标题
 - 选择截止时间
-- 选择启动动作类型
-- 输入启动目标
-- 输入启动按钮显示名
 ```
 
 示意：
@@ -334,19 +276,19 @@ TodoEditorDialog
 [新增顶层任务]
 
 □ 信息科学大作业        截止：2026-05-20    子任务：2/3
-  [完成] [启动] [新增子任务] [编辑] [删除]
+  [完成] [新增子任务] [编辑] [删除]
 
   □ 搭 MVC 架构          截止：2026-04-28    子任务：1/2
-    [完成] [启动] [新增子任务] [编辑] [删除]
+    [完成] [新增子任务] [编辑] [删除]
 
     ✓ 设计模型层          截止：2026-04-27
-      [取消完成] [启动] [新增子任务] [编辑] [删除]
+      [取消完成] [新增子任务] [编辑] [删除]
 
   ✓ 写项目笔记            截止：2026-04-29
-    [取消完成] [启动] [新增子任务] [编辑] [删除]
+    [取消完成] [新增子任务] [编辑] [删除]
 ```
 
-## 12. 主要交互流
+## 11. 主要交互流
 
 新增任务：
 
@@ -382,21 +324,6 @@ Controller refresh
 View 重新显示完成状态和子任务统计
 ```
 
-启动任务：
-
-```text
-用户点击启动
-  ↓
-View 调 TodoController::launchTask
-  ↓
-Controller 查询任务
-  ↓
-Controller 调 LaunchActionService::launch
-  ↓
-成功则发 infoOccurred
-失败则发 errorOccurred
-```
-
 删除任务：
 
 ```text
@@ -415,19 +342,16 @@ Controller refresh
 View 重画列表
 ```
 
-## 13. 错误处理
+## 12. 错误处理
 
 建议错误处理规则：
 
 - 标题为空：Dialog 或 Controller 拦截，提示用户。
 - 数据库初始化失败：Controller 发 `errorOccurred`。
 - 数据库写入失败：Controller 发 `errorOccurred`。
-- 启动动作类型为 `None`：可以提示“该任务没有设置启动动作”。
-- 启动目标为空：返回失败信息。
-- URL 或路径无法打开：返回失败信息。
 - 删除任务前：View 弹出确认框。
 
-## 14. 测试重点
+## 13. 测试重点
 
 第一阶段可以重点测试模型层和业务规则。
 
@@ -440,6 +364,7 @@ View 重画列表
 - 更新任务。
 - 删除任务。
 - 根据 `parent_id` 查询子任务。
+- 初始化后 schema 不包含启动动作字段。
 
 `TodoService`：
 
@@ -450,21 +375,14 @@ View 重画列表
 - 统计直接子任务完成数量。
 - 组装任意层级任务树。
 
-`LaunchActionService`：
-
-- `None` 类型返回无启动动作。
-- 空 target 返回失败。
-- Url/File/Folder/Application 类型能进入正确分支。
-
 View 层第一版主要通过手动运行验证：
 
 - 能新增、编辑、删除任务。
 - 能添加任意层级子任务。
 - 能切换完成状态。
 - 有子任务时能显示完成数量/总数量。
-- 启动按钮能打开对应目标或显示失败信息。
 
-## 15. 后续 UI 重写边界
+## 14. 后续 UI 重写边界
 
 第一阶段的朴素 Qt Widgets View 只是验证 MVC 架构和功能闭环。后续重写 UI 时应尽量保留：
 
@@ -490,7 +408,7 @@ view/
 
 只要新 View 继续通过 `TodoController` 操作业务，就不需要重写模型层、数据库层和控制层。
 
-## 16. 第一阶段不做的内容
+## 15. 第一阶段不做的内容
 
 为了保证架构简单、可读、可完成，第一阶段暂不实现：
 
@@ -498,6 +416,7 @@ view/
 - 标签、搜索、筛选。
 - 提醒和通知。
 - 重复任务。
+- 启动动作或快捷打开外部资源。
 - 复杂动画。
 - 复杂主题系统。
 - 云同步。

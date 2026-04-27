@@ -13,8 +13,8 @@ public:
     explicit TodoService(TodoRepository &repository);
 
     QVector<TodoItem> loadTaskTree() const;
-    int createTask(int parentId, const QString &title, const QDateTime &dueAt, const LaunchAction &launchAction);
-    bool updateTask(int id, const QString &title, const QDateTime &dueAt, const LaunchAction &launchAction);
+    int createTask(int parentId, const QString &title, const QDateTime &dueAt);
+    bool updateTask(int id, const QString &title, const QDateTime &dueAt);
     bool deleteTask(int id);
     bool toggleCompleted(int id);
     ChildStats childStats(int id) const;

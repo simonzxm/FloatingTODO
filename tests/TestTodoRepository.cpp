@@ -3,6 +3,7 @@
 #include "repository/TodoRepository.h"
 
 #include <QSqlDatabase>
+#include <QSqlQuery>
 #include <QUuid>
 
 class TestTodoRepository : public QObject
@@ -29,8 +30,6 @@ private slots:
         TodoItem item;
         item.title = "写模型层";
         item.completed = false;
-        item.launchAction.type = LaunchActionType::Url;
-        item.launchAction.target = "https://example.com";
 
         const int id = m_repo->add(item);
         QVERIFY(id > 0);
@@ -38,8 +37,21 @@ private slots:
         const auto loaded = m_repo->findById(id);
         QVERIFY(loaded.has_value());
         QCOMPARE(loaded->title, QString("写模型层"));
-        QCOMPARE(loaded->launchAction.type, LaunchActionType::Url);
-        QCOMPARE(loaded->launchAction.target, QString("https://example.com"));
+    }
+
+    void schemaDoesNotContainLaunchColumns()
+    {
+        QSqlQuery query(QSqlDatabase::database(m_connectionName));
+        QVERIFY(query.exec("PRAGMA table_info(todos)"));
+
+        QStringList columnNames;
+        while (query.next()) {
+            columnNames.push_back(query.value("name").toString());
+        }
+
+        QVERIFY(!columnNames.contains("launch_type"));
+        QVERIFY(!columnNames.contains("launch_target"));
+        QVERIFY(!columnNames.contains("launch_display_name"));
     }
 
     void updateTask()

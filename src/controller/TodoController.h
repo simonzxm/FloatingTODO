@@ -1,6 +1,5 @@
 #pragma once
 
-#include "service/LaunchActionService.h"
 #include "service/TodoService.h"
 
 #include <QObject>
@@ -10,15 +9,14 @@ class TodoController : public QObject
     Q_OBJECT
 
 public:
-    TodoController(TodoService &todoService, LaunchActionService &launchService, QObject *parent = nullptr);
+    explicit TodoController(TodoService &todoService, QObject *parent = nullptr);
 
     void refresh();
-    void addRootTask(const QString &title, const QDateTime &dueAt, const LaunchAction &launchAction);
-    void addChildTask(int parentId, const QString &title, const QDateTime &dueAt, const LaunchAction &launchAction);
-    void editTask(int id, const QString &title, const QDateTime &dueAt, const LaunchAction &launchAction);
+    void addRootTask(const QString &title, const QDateTime &dueAt);
+    void addChildTask(int parentId, const QString &title, const QDateTime &dueAt);
+    void editTask(int id, const QString &title, const QDateTime &dueAt);
     void deleteTask(int id);
     void toggleTaskCompleted(int id);
-    void launchTask(int id);
     ChildStats childStats(int id) const;
 
 signals:
@@ -28,5 +26,4 @@ signals:
 
 private:
     TodoService &m_todoService;
-    LaunchActionService &m_launchService;
 };

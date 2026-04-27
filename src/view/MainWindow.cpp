@@ -48,6 +48,6 @@ void MainWindow::openAddRootDialog()
     TodoEditorDialog dialog(this);
     dialog.setWindowTitle(QStringLiteral("新增顶层任务"));
     if (dialog.exec() == QDialog::Accepted) {
-        m_controller->addRootTask(dialog.title(), dialog.dueAt(), dialog.launchAction());
+        m_controller->addRootTask(dialog.title(), dialog.dueAt());
     }
 }

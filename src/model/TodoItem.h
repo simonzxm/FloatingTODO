@@ -1,7 +1,5 @@
 #pragma once
 
-#include "model/LaunchAction.h"
-
 #include <QDateTime>
 #include <QString>
 #include <QVector>
@@ -12,7 +10,6 @@ struct TodoItem {
     QString title;
     QDateTime dueAt;
     bool completed = false;
-    LaunchAction launchAction;
     QDateTime createdAt;
     QDateTime updatedAt;
     QVector<TodoItem> children;

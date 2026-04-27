@@ -10,7 +10,7 @@ QVector<TodoItem> TodoService::loadTaskTree() const
     return attachChildren(m_repository.findAll(), -1);
 }
 
-int TodoService::createTask(int parentId, const QString &title, const QDateTime &dueAt, const LaunchAction &launchAction)
+int TodoService::createTask(int parentId, const QString &title, const QDateTime &dueAt)
 {
     const QString trimmedTitle = title.trimmed();
     if (trimmedTitle.isEmpty()) {
@@ -22,11 +22,10 @@ int TodoService::createTask(int parentId, const QString &title, const QDateTime 
     item.title = trimmedTitle;
     item.dueAt = dueAt;
     item.completed = false;
-    item.launchAction = launchAction;
     return m_repository.add(item);
 }
 
-bool TodoService::updateTask(int id, const QString &title, const QDateTime &dueAt, const LaunchAction &launchAction)
+bool TodoService::updateTask(int id, const QString &title, const QDateTime &dueAt)
 {
     const QString trimmedTitle = title.trimmed();
     if (trimmedTitle.isEmpty()) {
@@ -40,7 +39,6 @@ bool TodoService::updateTask(int id, const QString &title, const QDateTime &dueA
 
     item->title = trimmedTitle;
     item->dueAt = dueAt;
-    item->launchAction = launchAction;
     return m_repository.update(*item);
 }
 

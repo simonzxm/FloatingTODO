@@ -14,7 +14,6 @@ public:
 
 signals:
     void toggleRequested(int id);
-    void launchRequested(int id);
     void addChildRequested(int id);
     void editRequested(int id);
     void deleteRequested(int id);
