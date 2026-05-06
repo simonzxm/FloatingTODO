@@ -1,5 +1,8 @@
 build/
+build-msvc-webengine/
 .vscode/
+.deps/
+.ifw-cache/
 
 CMakeUserPresets.json
 CMakeFiles/

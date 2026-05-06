@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FloatingTODO</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="stage" aria-label="FloatingTODO WebEngine prototype">
+    <section class="shell">
+      <header class="topbar">
+        <div class="title-zone">
+          <p class="eyebrow">Today</p>
+          <h1>FloatingTODO</h1>
+        </div>
+      </header>
+
+      <nav class="toolbar" aria-label="Task filters">
+        <button class="toolbar-button active" type="button">全部</button>
+        <button class="toolbar-button" type="button">进行中</button>
+        <button class="toolbar-button" type="button">已完成</button>
+      </nav>
+
+      <section class="task-list" aria-label="Static prototype tasks">
+        <article class="task-card done">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div class="task-copy">
+            <h2>完成 MVC 架构</h2>
+            <p>已完成 · 18:20</p>
+          </div>
+        </article>
+
+        <article class="task-card current">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div class="task-copy">
+            <h2>验证 WebEngine 外壳</h2>
+            <p>今天 · 21:00</p>
+          </div>
+        </article>
+
+        <article class="task-card">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div class="task-copy">
+            <h2>设计卡片动画</h2>
+            <p>明天 · 10:30</p>
+          </div>
+        </article>
+      </section>
+    </section>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

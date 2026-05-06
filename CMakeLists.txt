@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Sql Test)
+find_package(Qt6 COMPONENTS WebEngineWidgets QUIET)
+if(NOT Qt6WebEngineWidgets_FOUND)
+    message(FATAL_ERROR "Qt WebEngineWidgets is required for the WebEngine shell prototype. Install the Qt WebEngine component that matches your Qt kit, for example Qt 6 WebEngine for MSVC 2022 64-bit.")
+endif()
 
 qt_standard_project_setup()
 enable_testing()
@@ -30,6 +34,8 @@ set(FLOATINGTODO_CORE_SOURCES
 )
 
 set(FLOATINGTODO_VIEW_SOURCES
+    src/view/WebShellWindow.h
+    src/view/WebShellWindow.cpp
     src/view/MainWindow.h
     src/view/MainWindow.cpp
     src/view/TodoListView.h
@@ -52,7 +58,16 @@ qt_add_executable(todo_hello
     ${FLOATINGTODO_VIEW_SOURCES}
 )
 
-target_link_libraries(todo_hello PRIVATE floatingtodo_core Qt6::Widgets)
+target_link_libraries(todo_hello PRIVATE floatingtodo_core Qt6::Widgets Qt6::WebEngineWidgets)
+if(WIN32)
+    target_link_libraries(todo_hello PRIVATE dwmapi)
+endif()
+
+add_custom_command(TARGET todo_hello POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/web"
+        "$<TARGET_FILE_DIR:todo_hello>/web"
+)
 
 set_target_properties(todo_hello PROPERTIES
     WIN32_EXECUTABLE ON
