@@ -19,7 +19,9 @@ public:
     std::optional<TodoItem> findById(int id) const;
     int add(const TodoItem &item);
     bool update(const TodoItem &item);
+    bool updateParentAndOrder(int id, int parentId, int sortOrder);
     bool remove(int id);
+    bool removeAll();
     QVector<TodoItem> childrenOf(int parentId) const;
     bool removeSubtree(int id);
 

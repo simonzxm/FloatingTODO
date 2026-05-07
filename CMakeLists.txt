@@ -6,9 +6,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Sql Test)
-find_package(Qt6 COMPONENTS WebEngineWidgets QUIET)
+find_package(Qt6 COMPONENTS WebChannel WebEngineWidgets QUIET)
 if(NOT Qt6WebEngineWidgets_FOUND)
     message(FATAL_ERROR "Qt WebEngineWidgets is required for the WebEngine shell prototype. Install the Qt WebEngine component that matches your Qt kit, for example Qt 6 WebEngine for MSVC 2022 64-bit.")
+endif()
+if(NOT Qt6WebChannel_FOUND)
+    message(FATAL_ERROR "Qt WebChannel is required to connect the WebEngine frontend to the Qt backend.")
 endif()
 
 qt_standard_project_setup()
@@ -34,6 +37,8 @@ set(FLOATINGTODO_CORE_SOURCES
 )
 
 set(FLOATINGTODO_VIEW_SOURCES
+    src/view/WebTodoBridge.h
+    src/view/WebTodoBridge.cpp
     src/view/WebShellWindow.h
     src/view/WebShellWindow.cpp
     src/view/MainWindow.h
@@ -58,7 +63,7 @@ qt_add_executable(todo_hello
     ${FLOATINGTODO_VIEW_SOURCES}
 )
 
-target_link_libraries(todo_hello PRIVATE floatingtodo_core Qt6::Widgets Qt6::WebEngineWidgets)
+target_link_libraries(todo_hello PRIVATE floatingtodo_core Qt6::Widgets Qt6::WebChannel Qt6::WebEngineWidgets)
 if(WIN32)
     target_link_libraries(todo_hello PRIVATE dwmapi)
 endif()
@@ -76,8 +81,9 @@ set_target_properties(todo_hello PROPERTIES
 function(add_floatingtodo_test target source)
     qt_add_executable(${target}
         ${source}
+        ${ARGN}
     )
-    target_link_libraries(${target} PRIVATE floatingtodo_core Qt6::Test Qt6::Widgets)
+    target_link_libraries(${target} PRIVATE floatingtodo_core Qt6::Test Qt6::Widgets Qt6::WebChannel)
     add_test(NAME ${target} COMMAND ${target})
     set_tests_properties(${target} PROPERTIES
         ENVIRONMENT "PATH=${FLOATINGTODO_TEST_PATH}"
@@ -87,3 +93,8 @@ endfunction()
 add_floatingtodo_test(test_models tests/TestModels.cpp)
 add_floatingtodo_test(test_todo_repository tests/TestTodoRepository.cpp)
 add_floatingtodo_test(test_todo_service tests/TestTodoService.cpp)
+add_floatingtodo_test(test_web_todo_bridge
+    tests/TestWebTodoBridge.cpp
+    src/view/WebTodoBridge.h
+    src/view/WebTodoBridge.cpp
+)

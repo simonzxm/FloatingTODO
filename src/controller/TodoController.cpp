@@ -58,6 +58,33 @@ void TodoController::toggleTaskCompleted(int id)
     refresh();
 }
 
+void TodoController::reorderTask(int id, int parentId, int sortOrder)
+{
+    if (!m_todoService.reorderTask(id, parentId, sortOrder)) {
+        emit errorOccurred(QStringLiteral("更新任务顺序失败"));
+        return;
+    }
+    refresh();
+}
+
+void TodoController::reorderTasks(const QVariantList &orderedTasks)
+{
+    if (!m_todoService.reorderTasks(orderedTasks)) {
+        emit errorOccurred(QStringLiteral("更新任务顺序失败"));
+        return;
+    }
+    refresh();
+}
+
+void TodoController::replaceTasks(const QVariantList &tasks)
+{
+    if (!m_todoService.replaceTasks(tasks)) {
+        emit errorOccurred(QStringLiteral("保存任务失败"));
+        return;
+    }
+    refresh();
+}
+
 ChildStats TodoController::childStats(int id) const
 {
     return m_todoService.childStats(id);

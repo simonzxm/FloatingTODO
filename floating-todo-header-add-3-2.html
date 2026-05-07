@@ -4,10 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FloatingTODO</title>
-<script src="vendor/tailwindcss-forms-container-queries.js"></script>
-<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
-<link href="vendor/material-symbols.css" rel="stylesheet">
-<link href="vendor/inter.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script>
 tailwind.config = {
   darkMode: "class",
@@ -59,10 +58,6 @@ body {
 }
 .todo-widget.is-height-ready {
   transition: height 190ms cubic-bezier(.2, .8, .2, 1);
-}
-body.is-dragging-task .todo-widget {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
 }
 body.is-dragging-task,
 .todo-widget {
@@ -513,14 +508,9 @@ const SWIPE_ACTION_DISTANCE = 86;
 const SWIPE_PREVIEW_DISTANCE = 10;
 let pendingDrag = null;
 let dragState = null;
-let pendingDragMove = null;
-let dragMoveFrame = 0;
 let swipeState = null;
 let suppressNextClick = false;
 let heightTransitionsEnabled = false;
-let todoBridge = null;
-let nextLocalTaskId = -1;
-let backendLoaded = false;
 
 addTaskToggle.addEventListener("click", () => {
   const willOpen = !taskAddCard.classList.contains("is-open");
@@ -672,7 +662,7 @@ taskList.addEventListener("pointermove", (event) => {
 
   if (!dragState || dragState.pointerId !== event.pointerId) return;
   event.preventDefault();
-  scheduleDraggedItemMove(event.clientX, event.clientY);
+  moveDraggedItem(event.clientX, event.clientY);
 });
 
 taskList.addEventListener("pointerup", (event) => {
@@ -850,9 +840,8 @@ function commitNewTask() {
   requestAnimationFrame(() => newTaskInput.focus());
 }
 
-function createTaskElement(title, done = false, id = null) {
+function createTaskElement(title, done = false) {
   const task = document.createElement("div");
-  task.dataset.taskId = String(id ?? nextLocalTaskId--);
   task.className = `task-item flex flex-col rounded-lg p-standard${done ? " is-done" : ""}`;
   task.innerHTML = `
     <div class="task-head flex items-center justify-between">
@@ -877,9 +866,8 @@ function createTaskElement(title, done = false, id = null) {
   return task;
 }
 
-function createSubtaskElement(title, done = false, id = null) {
+function createSubtaskElement(title, done = false) {
   const row = document.createElement("div");
-  row.dataset.taskId = String(id ?? nextLocalTaskId--);
   row.className = "subtask-row flex items-center gap-standard";
   row.innerHTML = `
     <button aria-label="Complete subtask" class="complete-toggle ${done ? "is-checked text-primary" : "text-outline hover:text-primary transition-colors"} flex items-center justify-center" type="button">
@@ -1112,19 +1100,6 @@ function startDrag() {
   moveDraggedItem(currentX, currentY);
 }
 
-function scheduleDraggedItemMove(clientX, clientY) {
-  pendingDragMove = { clientX, clientY };
-  if (dragMoveFrame) return;
-
-  dragMoveFrame = requestAnimationFrame(() => {
-    dragMoveFrame = 0;
-    if (!dragState || !pendingDragMove) return;
-    const { clientX: nextX, clientY: nextY } = pendingDragMove;
-    pendingDragMove = null;
-    moveDraggedItem(nextX, nextY);
-  });
-}
-
 function moveDraggedItem(clientX, clientY) {
   const { element, ghost, offsetX, offsetY } = dragState;
   const scrollX = window.scrollX || window.pageXOffset;
@@ -1132,6 +1107,8 @@ function moveDraggedItem(clientX, clientY) {
 
   ghost.style.transform = `translate3d(${clientX + scrollX - offsetX}px, ${clientY + scrollY - offsetY}px, 0)`;
 
+  const previousRects = snapshotMovables();
+  const previousHeight = snapshotWidgetHeight();
   clearDropTargets();
 
   const targetTask = getTaskUnderPointer(clientX, clientY);
@@ -1145,7 +1122,8 @@ function moveDraggedItem(clientX, clientY) {
     placeMainPlaceholder(clientY);
   }
 
-  applyWidgetHeight();
+  animateWidgetHeight(previousHeight);
+  animateListShift(previousRects);
 }
 
 function getTaskUnderPointer(clientX, clientY) {
@@ -1203,11 +1181,6 @@ function getSubtaskAfterElement(inner, clientY) {
 function finishDrag(event) {
   if (pendingDrag && pendingDrag.pointerId === event.pointerId) clearPendingDrag();
   if (!dragState || dragState.pointerId !== event.pointerId) return;
-  if (dragMoveFrame) {
-    cancelAnimationFrame(dragMoveFrame);
-    dragMoveFrame = 0;
-    pendingDragMove = null;
-  }
 
   const previousRects = snapshotMovables();
   const previousHeight = snapshotWidgetHeight();
@@ -1217,7 +1190,7 @@ function finishDrag(event) {
     ensureSubtaskChrome(targetTask);
 
     if (type === "task") {
-      const row = createSubtaskElement(getTaskTitle(element), isTaskDone(element), element.dataset.taskId);
+      const row = createSubtaskElement(getTaskTitle(element), isTaskDone(element));
       placeholder.replaceWith(row);
       element.remove();
     } else {
@@ -1229,7 +1202,7 @@ function finishDrag(event) {
     normalizeTaskSubtasks(targetTask);
   } else {
     if (type === "subtask") {
-      const task = createTaskElement(getSubtaskTitle(element), isSubtaskDone(element), element.dataset.taskId);
+      const task = createTaskElement(getSubtaskTitle(element), isSubtaskDone(element));
       placeholder.replaceWith(task);
       element.remove();
       normalizeTaskSubtasks(sourceTask);
@@ -1363,78 +1336,7 @@ function updateTaskFromSubtasks(task, options = {}) {
   if (!options.skipDone) setTaskDone(task, completed === rows.length);
 }
 
-function renderTasksFromBackend(tasks) {
-  if (!Array.isArray(tasks) || !tasks.length) {
-    backendLoaded = true;
-    ensurePrototypeTaskIds();
-    return;
-  }
-
-  getTaskItems().forEach((item) => item.remove());
-  tasks.forEach((taskData) => {
-    taskList.insertBefore(createTaskFromData(taskData), taskAddCard);
-  });
-  getTaskItems().forEach(normalizeTaskSubtasks);
-  backendLoaded = true;
-  settleWidgetHeight();
-}
-
-function createTaskFromData(taskData) {
-  const task = createTaskElement(taskData.title, Boolean(taskData.completed), taskData.id);
-  const inner = task.querySelector(".subtask-inner");
-  (taskData.children || []).forEach((child) => {
-    inner.appendChild(createSubtaskElement(child.title, Boolean(child.completed), child.id));
-  });
-  return task;
-}
-
-function ensurePrototypeTaskIds() {
-  getTaskItems().forEach((task) => {
-    if (!task.dataset.taskId) task.dataset.taskId = String(nextLocalTaskId--);
-    getSubtaskRows(task).forEach((row) => {
-      if (!row.dataset.taskId) row.dataset.taskId = String(nextLocalTaskId--);
-    });
-  });
-}
-
-function exportTasks() {
-  ensurePrototypeTaskIds();
-  return getTaskItems().map((task, index) => ({
-    id: Number(task.dataset.taskId),
-    parentId: -1,
-    title: getTaskTitle(task),
-    completed: isTaskDone(task),
-    sortOrder: index,
-    children: getSubtaskRows(task).map((row, childIndex) => ({
-      id: Number(row.dataset.taskId),
-      parentId: Number(task.dataset.taskId),
-      title: getSubtaskTitle(row),
-      completed: isSubtaskDone(row),
-      sortOrder: childIndex,
-      children: []
-    }))
-  }));
-}
-
-function initializeBackendBridge() {
-  if (!window.qt?.webChannelTransport || typeof QWebChannel === "undefined") {
-    ensurePrototypeTaskIds();
-    return;
-  }
-
-  new QWebChannel(window.qt.webChannelTransport, (channel) => {
-    todoBridge = channel.objects.todoBridge;
-    todoBridge.tasks(renderTasksFromBackend);
-  });
-}
-
-window.FloatingTODO = {
-  exportTasks
-};
-
 getTaskItems().forEach(normalizeTaskSubtasks);
-ensurePrototypeTaskIds();
-initializeBackendBridge();
 initializeWidgetHeight();
 window.addEventListener("load", settleWidgetHeight);
 window.addEventListener("resize", settleWidgetHeight);

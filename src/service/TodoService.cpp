@@ -1,5 +1,7 @@
 #include "service/TodoService.h"
 
+#include <QVariantMap>
+
 TodoService::TodoService(TodoRepository &repository)
     : m_repository(repository)
 {
@@ -58,6 +60,38 @@ bool TodoService::toggleCompleted(int id)
     return m_repository.update(*item);
 }
 
+bool TodoService::reorderTask(int id, int parentId, int sortOrder)
+{
+    if (id < 0 || sortOrder < 0 || id == parentId || !m_repository.findById(id).has_value()) {
+        return false;
+    }
+    if (parentId >= 0 && !m_repository.findById(parentId).has_value()) {
+        return false;
+    }
+    return m_repository.updateParentAndOrder(id, parentId, sortOrder);
+}
+
+bool TodoService::reorderTasks(const QVariantList &orderedTasks)
+{
+    for (int index = 0; index < orderedTasks.size(); ++index) {
+        const QVariantMap item = orderedTasks.at(index).toMap();
+        if (!reorderTask(item.value(QStringLiteral("id")).toInt(),
+                         item.value(QStringLiteral("parentId"), -1).toInt(),
+                         index)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool TodoService::replaceTasks(const QVariantList &tasks)
+{
+    if (!m_repository.removeAll()) {
+        return false;
+    }
+    return insertSnapshotItems(tasks, -1);
+}
+
 ChildStats TodoService::childStats(int id) const
 {
     ChildStats stats;
@@ -69,6 +103,32 @@ ChildStats TodoService::childStats(int id) const
         }
     }
     return stats;
+}
+
+bool TodoService::insertSnapshotItems(const QVariantList &items, int parentId)
+{
+    for (int index = 0; index < items.size(); ++index) {
+        const QVariantMap snapshot = items.at(index).toMap();
+        const QString title = snapshot.value(QStringLiteral("title")).toString().trimmed();
+        if (title.isEmpty()) {
+            continue;
+        }
+
+        TodoItem item;
+        item.parentId = parentId;
+        item.title = title;
+        item.completed = snapshot.value(QStringLiteral("completed")).toBool();
+        item.sortOrder = snapshot.value(QStringLiteral("sortOrder"), index).toInt();
+        const int newId = m_repository.add(item);
+        if (newId < 0) {
+            return false;
+        }
+
+        if (!insertSnapshotItems(snapshot.value(QStringLiteral("children")).toList(), newId)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 QVector<TodoItem> TodoService::attachChildren(const QVector<TodoItem> &allItems, int parentId) const

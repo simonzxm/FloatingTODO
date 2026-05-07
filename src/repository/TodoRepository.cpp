@@ -40,6 +40,7 @@ bool TodoRepository::initialize()
         "title TEXT NOT NULL,"
         "due_at TEXT NULL,"
         "completed INTEGER NOT NULL DEFAULT 0,"
+        "sort_order INTEGER NOT NULL DEFAULT 0,"
         "created_at TEXT NOT NULL,"
         "updated_at TEXT NOT NULL"
         ")"
@@ -50,7 +51,7 @@ QVector<TodoItem> TodoRepository::findAll() const
 {
     QVector<TodoItem> items;
     QSqlQuery query(m_db);
-    query.exec("SELECT * FROM todos ORDER BY id ASC");
+    query.exec("SELECT * FROM todos ORDER BY parent_id IS NOT NULL, parent_id ASC, sort_order ASC, id ASC");
     while (query.next()) {
         items.push_back(itemFromQuery(query));
     }
@@ -74,13 +75,14 @@ int TodoRepository::add(const TodoItem &item)
     QSqlQuery query(m_db);
     query.prepare(
         "INSERT INTO todos "
-        "(parent_id, title, due_at, completed, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?)"
+        "(parent_id, title, due_at, completed, sort_order, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)"
     );
     query.addBindValue(item.parentId >= 0 ? QVariant(item.parentId) : QVariant());
     query.addBindValue(item.title);
     query.addBindValue(item.dueAt.isValid() ? QVariant(item.dueAt.toUTC().toString(Qt::ISODate)) : QVariant());
     query.addBindValue(item.completed ? 1 : 0);
+    query.addBindValue(item.sortOrder);
     query.addBindValue(now.toString(Qt::ISODate));
     query.addBindValue(now.toString(Qt::ISODate));
     if (!query.exec()) {
@@ -93,15 +95,29 @@ bool TodoRepository::update(const TodoItem &item)
 {
     QSqlQuery query(m_db);
     query.prepare(
-        "UPDATE todos SET parent_id = ?, title = ?, due_at = ?, completed = ?, "
+        "UPDATE todos SET parent_id = ?, title = ?, due_at = ?, completed = ?, sort_order = ?, "
         "updated_at = ? WHERE id = ?"
     );
     query.addBindValue(item.parentId >= 0 ? QVariant(item.parentId) : QVariant());
     query.addBindValue(item.title);
     query.addBindValue(item.dueAt.isValid() ? QVariant(item.dueAt.toUTC().toString(Qt::ISODate)) : QVariant());
     query.addBindValue(item.completed ? 1 : 0);
+    query.addBindValue(item.sortOrder);
     query.addBindValue(QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
     query.addBindValue(item.id);
+    return query.exec();
+}
+
+bool TodoRepository::updateParentAndOrder(int id, int parentId, int sortOrder)
+{
+    QSqlQuery query(m_db);
+    query.prepare(
+        "UPDATE todos SET parent_id = ?, sort_order = ?, updated_at = ? WHERE id = ?"
+    );
+    query.addBindValue(parentId >= 0 ? QVariant(parentId) : QVariant());
+    query.addBindValue(sortOrder);
+    query.addBindValue(QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
+    query.addBindValue(id);
     return query.exec();
 }
 
@@ -113,11 +129,17 @@ bool TodoRepository::remove(int id)
     return query.exec();
 }
 
+bool TodoRepository::removeAll()
+{
+    QSqlQuery query(m_db);
+    return query.exec("DELETE FROM todos");
+}
+
 QVector<TodoItem> TodoRepository::childrenOf(int parentId) const
 {
     QVector<TodoItem> items;
     QSqlQuery query(m_db);
-    query.prepare("SELECT * FROM todos WHERE parent_id = ? ORDER BY id ASC");
+    query.prepare("SELECT * FROM todos WHERE parent_id = ? ORDER BY sort_order ASC, id ASC");
     query.addBindValue(parentId);
     query.exec();
     while (query.next()) {
@@ -151,7 +173,8 @@ bool TodoRepository::migrateLegacySchemaIfNeeded()
     if (columns.isEmpty()
         || (!columns.contains("launch_type")
             && !columns.contains("launch_target")
-            && !columns.contains("launch_display_name"))) {
+            && !columns.contains("launch_display_name")
+            && columns.contains("sort_order"))) {
         return true;
     }
 
@@ -167,13 +190,15 @@ bool TodoRepository::migrateLegacySchemaIfNeeded()
             "title TEXT NOT NULL,"
             "due_at TEXT NULL,"
             "completed INTEGER NOT NULL DEFAULT 0,"
+            "sort_order INTEGER NOT NULL DEFAULT 0,"
             "created_at TEXT NOT NULL,"
             "updated_at TEXT NOT NULL"
             ")"
         )
         && query.exec(
-            "INSERT INTO todos_new (id, parent_id, title, due_at, completed, created_at, updated_at) "
-            "SELECT id, parent_id, title, due_at, completed, created_at, updated_at FROM todos"
+            QString("INSERT INTO todos_new (id, parent_id, title, due_at, completed, sort_order, created_at, updated_at) "
+                    "SELECT id, parent_id, title, due_at, completed, %1, created_at, updated_at FROM todos")
+                .arg(columns.contains("sort_order") ? QStringLiteral("sort_order") : QStringLiteral("id"))
         )
         && query.exec("DROP TABLE todos")
         && query.exec("ALTER TABLE todos_new RENAME TO todos");
@@ -193,6 +218,7 @@ TodoItem TodoRepository::itemFromQuery(const QSqlQuery &query) const
     item.title = query.value("title").toString();
     item.dueAt = QDateTime::fromString(query.value("due_at").toString(), Qt::ISODate);
     item.completed = query.value("completed").toInt() != 0;
+    item.sortOrder = query.value("sort_order").toInt();
     item.createdAt = QDateTime::fromString(query.value("created_at").toString(), Qt::ISODate);
     item.updatedAt = QDateTime::fromString(query.value("updated_at").toString(), Qt::ISODate);
     return item;

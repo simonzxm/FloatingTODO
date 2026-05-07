@@ -1,6 +1,13 @@
 #include "view/WebShellWindow.h"
 
+#include "controller/TodoController.h"
+#include "repository/TodoRepository.h"
+#include "service/TodoService.h"
+#include "view/WebTodoBridge.h"
+
 #include <QCoreApplication>
+#include <QCloseEvent>
+#include <QDebug>
 #include <QDir>
 #include <QEvent>
 #include <QFileInfo>
@@ -14,6 +21,7 @@
 #include <QShowEvent>
 #include <QTimer>
 #include <QVBoxLayout>
+#include <QWebChannel>
 #include <QWebEnginePage>
 #include <QWebEngineView>
 #include <QWindow>
@@ -49,6 +57,7 @@ constexpr int kDragInset = 0;
 WebShellWindow::WebShellWindow(QWidget *parent)
     : QWidget(parent)
     , m_webView(new QWebEngineView(this))
+    , m_webChannel(new QWebChannel(this))
     , m_dragOverlay(new QWidget(this))
     , m_dragSnapshot(new QLabel(this))
 {
@@ -69,6 +78,9 @@ WebShellWindow::WebShellWindow(QWidget *parent)
     m_webView->setAutoFillBackground(false);
     m_webView->setStyleSheet(QStringLiteral("background: transparent;"));
     m_webView->page()->setBackgroundColor(Qt::transparent);
+    setupTodoBackend();
+    m_webChannel->registerObject(QStringLiteral("todoBridge"), m_bridge);
+    m_webView->page()->setWebChannel(m_webChannel);
     m_webView->installEventFilter(this);
     m_webView->load(resolveIndexUrl());
 
@@ -82,6 +94,14 @@ WebShellWindow::WebShellWindow(QWidget *parent)
     m_dragOverlay->setStyleSheet(QStringLiteral("background: transparent;"));
     m_dragOverlay->installEventFilter(this);
     m_dragOverlay->hide();
+}
+
+WebShellWindow::~WebShellWindow()
+{
+    delete m_bridge;
+    delete m_controller;
+    delete m_service;
+    delete m_repository;
 }
 
 bool WebShellWindow::eventFilter(QObject *watched, QEvent *event)
@@ -124,6 +144,25 @@ bool WebShellWindow::eventFilter(QObject *watched, QEvent *event)
     }
 
     return QWidget::eventFilter(watched, event);
+}
+
+void WebShellWindow::closeEvent(QCloseEvent *event)
+{
+    if (m_closeAfterSnapshot || !m_webView || !m_bridge) {
+        QWidget::closeEvent(event);
+        return;
+    }
+
+    event->ignore();
+    m_webView->page()->runJavaScript(
+        QStringLiteral("window.FloatingTODO && window.FloatingTODO.exportTasks ? window.FloatingTODO.exportTasks() : []"),
+        [this](const QVariant &snapshot) {
+            if (m_bridge) {
+                m_bridge->replaceTasks(snapshot.toList());
+            }
+            m_closeAfterSnapshot = true;
+            close();
+        });
 }
 
 void WebShellWindow::keyPressEvent(QKeyEvent *event)
@@ -170,6 +209,25 @@ QUrl WebShellWindow::resolveIndexUrl() const
 
     const QString workingDirPath = QDir(QDir::currentPath()).filePath("web/index.html");
     return QUrl::fromLocalFile(workingDirPath);
+}
+
+QString WebShellWindow::resolveDatabasePath() const
+{
+    const QString dataDir = QDir(QCoreApplication::applicationDirPath()).filePath("data");
+    QDir().mkpath(dataDir);
+    return QDir(dataDir).filePath("floatingtodo.sqlite");
+}
+
+void WebShellWindow::setupTodoBackend()
+{
+    m_repository = new TodoRepository(resolveDatabasePath(), QStringLiteral("floatingtodo_web_shell"));
+    if (!m_repository->initialize()) {
+        qWarning() << "Failed to initialize FloatingTODO database";
+    }
+
+    m_service = new TodoService(*m_repository);
+    m_controller = new TodoController(*m_service, this);
+    m_bridge = new WebTodoBridge(m_controller, this);
 }
 
 void WebShellWindow::moveToTopRight()

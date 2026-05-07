@@ -10,6 +10,7 @@ struct TodoItem {
     QString title;
     QDateTime dueAt;
     bool completed = false;
+    int sortOrder = 0;
     QDateTime createdAt;
     QDateTime updatedAt;
     QVector<TodoItem> children;

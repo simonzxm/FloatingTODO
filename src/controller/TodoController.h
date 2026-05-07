@@ -3,6 +3,7 @@
 #include "service/TodoService.h"
 
 #include <QObject>
+#include <QVariantList>
 
 class TodoController : public QObject
 {
@@ -17,6 +18,9 @@ public:
     void editTask(int id, const QString &title, const QDateTime &dueAt);
     void deleteTask(int id);
     void toggleTaskCompleted(int id);
+    void reorderTask(int id, int parentId, int sortOrder);
+    void reorderTasks(const QVariantList &orderedTasks);
+    void replaceTasks(const QVariantList &tasks);
     ChildStats childStats(int id) const;
 
 signals:
