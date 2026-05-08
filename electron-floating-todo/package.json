@@ -1,0 +1,39 @@
+{
+  "name": "electron-floating-todo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Electron desktop shell for the FloatingTODO web component.",
+  "author": "FloatingTODO",
+  "homepage": "https://github.com/whyself/FloatingTODO",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/whyself/FloatingTODO.git"
+  },
+  "main": "main.js",
+  "scripts": {
+    "start": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue; electron .\"",
+    "smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-check.ps1",
+    "dist": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$env:ELECTRON_BUILDER_CACHE=(Join-Path $PWD '.cache/electron-builder'); electron-builder --win portable\""
+  },
+  "build": {
+    "appId": "local.floatingtodo.electron",
+    "productName": "FloatingTODO",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable",
+      "signAndEditExecutable": false
+    }
+  },
+  "devDependencies": {
+    "electron": "^42.0.0",
+    "electron-builder": "^26.8.1"
+  }
+}

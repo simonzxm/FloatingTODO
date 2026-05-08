@@ -3,12 +3,26 @@ build-msvc-webengine/
 .vscode/
 .deps/
 .ifw-cache/
+docs/superpowers/
+
+# Legacy/local prototype sources kept out of the Electron release branch.
+CMakeLists.txt
+notes/
+src/
+tests/
+web/
 
 CMakeUserPresets.json
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 compile_commands.json
+
+# Electron local state and build output.
+**/node_modules/
+**/.cache/
+**/dist/
+package-lock.json.tmp
 
 *.user
 *.autosave

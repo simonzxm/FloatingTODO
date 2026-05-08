@@ -4,10 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FloatingTODO</title>
-<script src="vendor/tailwindcss-forms-container-queries.js"></script>
-<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
-<link href="vendor/material-symbols.css" rel="stylesheet">
-<link href="vendor/inter.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script>
 tailwind.config = {
   darkMode: "class",
@@ -39,9 +38,7 @@ tailwind.config = {
 <style>
 * { box-sizing: border-box; }
 body {
-  background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuChNjkBzeTu8rX5dVY96VGHMEl6LPpKTtsmSFP59sJDRnFlVZFuOnBcc-5lnJp7t2U1Lz7AvWEVsQNDR3yqdsic1WN4jE7sHDdp7_ZmAQGbqiBDlZbVf1Dzh8oWQfUoF3EuOFCmNBHD3CUbMT9WC1V4okiiWjIlbETibxM2tE5FOfO7lXpoxej9Zs2LDEchUpM727g_F7Kssmw0uA6wJzQx4jIxbyZziL8Z8Yal8Dco_Qa6EolZNgsG55SUVZhChzSsI_lgQehmixw);
-  background-size: cover;
-  background-position: center;
+  background: transparent;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -50,27 +47,17 @@ body {
   padding: 20px;
   overflow: hidden;
 }
-.todo-widget {
-  inline-size: 380px;
-  max-block-size: min(615px, calc(100vh - 40px));
-  height: auto;
-  transform-origin: top center;
-  transition: none;
-}
-.todo-widget.is-height-ready {
-  transition: height 190ms cubic-bezier(.2, .8, .2, 1);
-}
-body.is-dragging-task .todo-widget {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
 body.is-dragging-task,
-.todo-widget {
+.task-list {
   user-select: none;
   -webkit-user-select: none;
 }
 .task-list {
   position: relative;
+  inline-size: 380px;
+  max-block-size: min(615px, calc(100vh - 40px));
+  height: auto;
+  transform-origin: top center;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -80,9 +67,16 @@ body.is-dragging-task,
   overflow-y: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  transition: none;
 }
-.todo-widget.is-scrollable .task-list {
-  block-size: 100%;
+body.is-alt-window-dragging .task-list,
+body.is-alt-window-dragging .task-list * {
+  -webkit-app-region: drag;
+}
+.task-list.is-height-ready {
+  transition: none;
+}
+.task-list.is-scrollable {
   overflow-y: auto;
 }
 .task-list::-webkit-scrollbar {
@@ -91,8 +85,8 @@ body.is-dragging-task,
   display: none;
 }
 .task-item {
-  background: rgba(255,255,255,.42);
-  border: 1px solid rgba(255,255,255,.24);
+  background: rgba(255,255,255,.56);
+  border: 1px solid rgba(255,255,255,.32);
   cursor: grab;
   position: relative;
   transition:
@@ -102,18 +96,17 @@ body.is-dragging-task,
     transform 260ms cubic-bezier(.2,.8,.2,1),
     min-height 260ms cubic-bezier(.2,.8,.2,1);
 }
-.task-item:hover { background: rgba(255,255,255,.52); }
+.task-item:hover:not(:has(.subtask-row:hover)) { background: rgba(255,255,255,.64); }
 .task-item:hover .done-actions,
 .subtask-row:hover .subtask-actions {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(0) scale(1);
+  opacity: 0;
+  pointer-events: none;
 }
 .task-item.is-done {
-  background: rgba(193,237,209,.2);
-  border-color: rgba(64,102,81,.2);
+  background: rgba(193,237,209,.34);
+  border-color: rgba(64,102,81,.24);
 }
-.task-item.is-done:hover { background: rgba(193,237,209,.28); }
+.task-item.is-done:hover:not(:has(.subtask-row:hover)) { background: rgba(193,237,209,.42); }
 .task-title {
   position: relative;
   display: inline-block;
@@ -139,7 +132,7 @@ body.is-dragging-task,
   cursor: default;
   flex-shrink: 0;
 }
-.add-task-card:hover { background: rgba(255,255,255,.48); }
+.add-task-card:hover { background: rgba(255,255,255,.6); }
 .add-task-card .task-head { min-height: 24px; }
 .add-square {
   inline-size: 24px;
@@ -233,7 +226,7 @@ body.is-dragging-task,
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
 .subtask-row {
   cursor: grab;
@@ -242,7 +235,7 @@ body.is-dragging-task,
   margin-inline-start: 34px;
   padding-inline-start: 8px;
   padding-inline-end: 4px;
-  min-height: 30px;
+  min-height: 38px;
   user-select: none;
   -webkit-user-select: none;
   transition:
@@ -254,7 +247,13 @@ body.is-dragging-task,
   min-width: 0;
   flex: 1;
 }
-.subtask-row:hover { background: rgba(255,255,255,.18); }
+.task-item:not(.is-done):not(.add-task-card):hover:not(:has(.subtask-row:hover)),
+.subtask-row:hover {
+  background:
+    linear-gradient(rgba(193,237,209,.22), rgba(193,237,209,.22)),
+    rgba(255,255,255,.56);
+  box-shadow: inset 0 0 0 1px rgba(64,102,81,.18);
+}
 .subtask-row .complete-toggle {
   inline-size: 18px;
   block-size: 18px;
@@ -271,6 +270,7 @@ body.is-dragging-task,
 }
 .done-actions,
 .subtask-actions {
+  display: none;
   opacity: 0;
   pointer-events: none;
   transform: translateX(8px) scale(.92);
@@ -350,7 +350,7 @@ body.is-dragging-task,
   transition: none;
 }
 .drag-ghost {
-  position: absolute;
+  position: fixed;
   margin: 0;
   will-change: transform;
 }
@@ -374,8 +374,11 @@ body.is-dragging-task,
 .task-item.is-completing { animation: taskCompletePop 520ms cubic-bezier(.2,.8,.2,1); }
 .task-item.is-drop-settling { animation: dragSettle 220ms cubic-bezier(.2,.8,.2,1); }
 .task-item.is-subtask-target {
-  background: rgba(193,237,209,.18);
-  border-color: rgba(64,102,81,.28);
+  background:
+    linear-gradient(rgba(193,237,209,.22), rgba(193,237,209,.22)),
+    rgba(255,255,255,.56);
+  border-color: rgba(255,255,255,.32);
+  box-shadow: inset 0 0 0 1px rgba(64,102,81,.18);
 }
 .task-item.is-subtask-target .subtask-panel {
   grid-template-rows: 1fr;
@@ -408,8 +411,7 @@ body.is-dragging-task,
 </style>
 </head>
 <body>
-<div class="todo-widget bg-surface/30 backdrop-blur-[40px] rounded-2xl border border-white/40 shadow-xl overflow-hidden flex flex-col">
-<main class="task-list" id="taskList">
+<main class="task-list flex flex-col" id="taskList">
 <div class="task-item has-subtasks flex flex-col rounded-lg p-standard">
 <div class="task-head flex items-center justify-between">
 <div class="flex items-center gap-standard">
@@ -499,28 +501,32 @@ body.is-dragging-task,
 </div>
 </div>
 </main>
-</div>
 <script>
 const addTaskToggle = document.getElementById("addTaskToggle");
 const taskAddCard = document.getElementById("taskAddCard");
 const topAddComposer = document.getElementById("topAddComposer");
 const newTaskInput = document.getElementById("newTaskInput");
 const taskList = document.getElementById("taskList");
-const todoWidget = document.querySelector(".todo-widget");
+const todoWidget = taskList;
 const LONG_PRESS_MS = 280;
 const DRAG_CANCEL_DISTANCE = 8;
 const SWIPE_ACTION_DISTANCE = 86;
 const SWIPE_PREVIEW_DISTANCE = 10;
+const LIST_SHIFT_ANIMATION_MS = 190;
 let pendingDrag = null;
 let dragState = null;
-let pendingDragMove = null;
-let dragMoveFrame = 0;
 let swipeState = null;
 let suppressNextClick = false;
 let heightTransitionsEnabled = false;
-let todoBridge = null;
-let nextLocalTaskId = -1;
-let backendLoaded = false;
+let desktopResizeFrame = 0;
+let desktopResizeHeld = false;
+let desktopResizeHoldId = 0;
+let panelSettleTimer = 0;
+const SAVE_DEBOUNCE_MS = 220;
+let nextLocalTaskId = 1;
+let persistenceReady = false;
+let applyingPersistedTasks = false;
+let saveTimer = 0;
 
 addTaskToggle.addEventListener("click", () => {
   const willOpen = !taskAddCard.classList.contains("is-open");
@@ -596,7 +602,10 @@ taskList.addEventListener("click", (event) => {
     const previousHeight = snapshotWidgetHeight();
     task.classList.toggle("is-collapsed", willCollapse);
     collapseButton.setAttribute("aria-expanded", String(!willCollapse));
+    const holdId = holdDesktopWindowHeight(getWidgetMaxHeight());
     animateWidgetHeight(previousHeight);
+    settleWidgetHeightAfterPanelTransition(task, holdId);
+    schedulePersist();
     return;
   }
 
@@ -617,7 +626,25 @@ taskList.addEventListener("click", (event) => {
   updateTaskFromSubtasks(task, { skipDone: true });
 });
 
+function setAltWindowDrag(enabled) {
+  document.body.classList.toggle("is-alt-window-dragging", enabled);
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Alt") setAltWindowDrag(true);
+});
+
+document.addEventListener("keyup", (event) => {
+  if (event.key === "Alt") setAltWindowDrag(false);
+});
+
+window.addEventListener("blur", () => setAltWindowDrag(false));
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) setAltWindowDrag(false);
+});
+
 taskList.addEventListener("pointerdown", (event) => {
+  if (event.altKey) return;
   if (event.button !== 0 || isInteractiveTarget(event.target)) return;
   const row = event.target.closest(".subtask-row");
   const task = row ? row.closest(".task-item") : event.target.closest(".task-item");
@@ -672,7 +699,7 @@ taskList.addEventListener("pointermove", (event) => {
 
   if (!dragState || dragState.pointerId !== event.pointerId) return;
   event.preventDefault();
-  scheduleDraggedItemMove(event.clientX, event.clientY);
+  moveDraggedItem(event.clientX, event.clientY);
 });
 
 taskList.addEventListener("pointerup", (event) => {
@@ -709,6 +736,96 @@ function getSubtaskRows(task) {
   return Array.from(task.querySelectorAll(".subtask-row"));
 }
 
+function createLocalId(prefix) {
+  return `${prefix}-${Date.now().toString(36)}-${nextLocalTaskId++}`;
+}
+
+function assignTaskId(element, prefix, id) {
+  element.dataset.taskId = String(id || createLocalId(prefix));
+}
+
+function ensureTaskIds() {
+  getTaskItems().forEach((task) => {
+    if (!task.dataset.taskId) assignTaskId(task, "task");
+    getSubtaskRows(task).forEach((row) => {
+      if (!row.dataset.taskId) assignTaskId(row, "subtask");
+    });
+  });
+}
+
+function exportTasks() {
+  ensureTaskIds();
+  return getTaskItems().map((task, index) => ({
+    id: task.dataset.taskId,
+    title: getTaskTitle(task),
+    completed: isTaskDone(task),
+    collapsed: task.classList.contains("is-collapsed"),
+    order: index,
+    children: getSubtaskRows(task).map((row, childIndex) => ({
+      id: row.dataset.taskId,
+      title: getSubtaskTitle(row),
+      completed: isSubtaskDone(row),
+      order: childIndex
+    }))
+  }));
+}
+
+function createTaskFromData(taskData) {
+  const task = createTaskElement(taskData?.title || "Untitled task", Boolean(taskData?.completed), taskData?.id);
+  const inner = task.querySelector(".subtask-inner");
+
+  if (Array.isArray(taskData?.children)) {
+    taskData.children.forEach((child) => {
+      inner.appendChild(createSubtaskElement(child?.title || "Untitled subtask", Boolean(child?.completed), child?.id));
+    });
+  }
+
+  normalizeTaskSubtasks(task);
+  if (taskData?.collapsed && getSubtaskRows(task).length) {
+    task.classList.add("is-collapsed");
+    task.querySelector(".collapse-toggle")?.setAttribute("aria-expanded", "false");
+  }
+
+  return task;
+}
+
+function renderPersistedTasks(tasks) {
+  if (!Array.isArray(tasks)) return false;
+  getTaskItems().forEach((task) => task.remove());
+  tasks.forEach((taskData) => {
+    taskList.insertBefore(createTaskFromData(taskData), taskAddCard);
+  });
+  settleWidgetHeight();
+  return true;
+}
+
+async function initializePersistence() {
+  applyingPersistedTasks = true;
+  try {
+    const tasks = await window.floatingTodoDesktop?.loadTasks?.();
+    if (Array.isArray(tasks)) renderPersistedTasks(tasks);
+    else ensureTaskIds();
+  } catch (error) {
+    console.error("Failed to initialize persisted tasks:", error);
+    ensureTaskIds();
+  } finally {
+    applyingPersistedTasks = false;
+    persistenceReady = true;
+    schedulePersist();
+  }
+}
+
+function schedulePersist() {
+  if (applyingPersistedTasks || !persistenceReady || !window.floatingTodoDesktop?.saveTasks) return;
+  window.clearTimeout(saveTimer);
+  saveTimer = window.setTimeout(() => {
+    saveTimer = 0;
+    window.floatingTodoDesktop.saveTasks(exportTasks()).catch((error) => {
+      console.error("Failed to save persisted tasks:", error);
+    });
+  }, SAVE_DEBOUNCE_MS);
+}
+
 function animateListShift(previousRects, options = {}) {
   if (options.onlyMovedDown) {
     getAnimatedItems().forEach((item) => {
@@ -719,7 +836,7 @@ function animateListShift(previousRects, options = {}) {
       if (deltaY <= 0) return;
       item.animate(
         [{ transform: `translateY(${deltaY}px)` }, { transform: "translateY(0)" }],
-        { duration: 190, easing: "cubic-bezier(.2, .8, .2, 1)" }
+        { duration: LIST_SHIFT_ANIMATION_MS, easing: "cubic-bezier(.2, .8, .2, 1)" }
       );
     });
     return;
@@ -733,13 +850,13 @@ function animateListShift(previousRects, options = {}) {
     if (!deltaY) return;
     item.animate(
       [{ transform: `translateY(${deltaY}px)` }, { transform: "translateY(0)" }],
-      { duration: 190, easing: "cubic-bezier(.2, .8, .2, 1)" }
+      { duration: LIST_SHIFT_ANIMATION_MS, easing: "cubic-bezier(.2, .8, .2, 1)" }
     );
   });
 }
 
 function getWidgetMaxHeight() {
-  return Math.min(615, window.innerHeight - 40);
+  return Math.min(615, Math.max(240, (window.screen?.availHeight || 695) - 80));
 }
 
 function measureWidgetContentHeight() {
@@ -764,9 +881,11 @@ function applyWidgetHeight() {
   const maxHeight = getWidgetMaxHeight();
   const contentHeight = measureWidgetContentHeight();
   const shouldScroll = contentHeight > maxHeight + 1;
+  const nextHeight = Math.min(contentHeight, maxHeight);
 
   todoWidget.classList.toggle("is-scrollable", shouldScroll);
-  todoWidget.style.height = `${Math.min(contentHeight, maxHeight)}px`;
+  todoWidget.style.height = shouldScroll ? `${nextHeight}px` : "auto";
+  syncDesktopWindowHeight(nextHeight);
 }
 
 function initializeWidgetHeight() {
@@ -795,27 +914,58 @@ function snapshotWidgetHeight() {
 }
 
 function animateWidgetHeight(previousHeight = snapshotWidgetHeight()) {
-  if (!heightTransitionsEnabled) {
-    applyWidgetHeight();
-    return;
-  }
-
-  const maxHeight = getWidgetMaxHeight();
-  const contentHeight = measureWidgetContentHeight();
-  const shouldScroll = contentHeight > maxHeight + 1;
-  const nextHeight = shouldScroll ? maxHeight : contentHeight;
-
-  todoWidget.style.height = `${previousHeight}px`;
-  void todoWidget.offsetHeight;
-  todoWidget.classList.toggle("is-scrollable", shouldScroll);
-
-  requestAnimationFrame(() => {
-    todoWidget.style.height = `${nextHeight}px`;
-  });
+  applyWidgetHeight();
 }
 
-function animateWidgetHeightAfterListShift(previousHeight) {
-  requestAnimationFrame(() => animateWidgetHeight(previousHeight));
+function animateWidgetHeightAfterListShift(previousHeight, holdId = 0) {
+  const heldHeight = Math.ceil(previousHeight || snapshotWidgetHeight());
+  todoWidget.style.height = `${heldHeight}px`;
+  syncDesktopWindowHeight(heldHeight, { force: true });
+
+  window.setTimeout(() => {
+    releaseDesktopWindowHeight(holdId);
+    animateWidgetHeight(previousHeight);
+  }, LIST_SHIFT_ANIMATION_MS + 40);
+}
+
+function settleWidgetHeightAfterPanelTransition(task, holdId) {
+  const panel = task?.querySelector(".subtask-panel");
+  const settle = () => {
+    releaseDesktopWindowHeight(holdId);
+    settleWidgetHeight();
+  };
+  window.clearTimeout(panelSettleTimer);
+  if (panel) {
+    panel.addEventListener("transitionend", settle, { once: true });
+  }
+  panelSettleTimer = window.setTimeout(settle, 360);
+}
+
+function holdDesktopWindowHeight(contentHeight) {
+  desktopResizeHoldId += 1;
+  desktopResizeHeld = true;
+  syncDesktopWindowHeight(contentHeight, { force: true });
+  return desktopResizeHoldId;
+}
+
+function releaseDesktopWindowHeight(holdId = desktopResizeHoldId) {
+  if (holdId !== desktopResizeHoldId) return;
+  desktopResizeHeld = false;
+}
+
+function syncDesktopWindowHeight(contentHeight = todoWidget.getBoundingClientRect().height, options = {}) {
+  if (!window.floatingTodoDesktop?.resizeToContent) return;
+  if (desktopResizeHeld && !options.force) return;
+  if (desktopResizeFrame) cancelAnimationFrame(desktopResizeFrame);
+  desktopResizeFrame = requestAnimationFrame(() => {
+    desktopResizeFrame = 0;
+    const bodyStyles = getComputedStyle(document.body);
+    const verticalPadding =
+      (parseFloat(bodyStyles.paddingTop) || 0) +
+      (parseFloat(bodyStyles.paddingBottom) || 0);
+    const height = Math.ceil(contentHeight + verticalPadding);
+    window.floatingTodoDesktop.resizeToContent(height);
+  });
 }
 
 function snapshotMovables() {
@@ -831,6 +981,7 @@ function commitNewTask() {
   if (!taskName) return;
 
   const wasScrollable = todoWidget.classList.contains("is-scrollable");
+  const holdId = holdDesktopWindowHeight(getWidgetMaxHeight());
   const previousRects = snapshotMovables();
   const previousHeight = snapshotWidgetHeight();
   const task = createTaskElement(taskName);
@@ -838,7 +989,7 @@ function commitNewTask() {
   taskList.insertBefore(task, taskAddCard);
   animateWidgetHeight(previousHeight);
   animateListShift(previousRects, { onlyMovedDown: true });
-  task.addEventListener("animationend", () => task.classList.remove("is-new"), { once: true });
+  settleWidgetHeightAfterTaskIntro(task, holdId);
 
   if (wasScrollable) {
     requestAnimationFrame(() => taskList.scrollTo({ top: taskList.scrollHeight, behavior: "smooth" }));
@@ -847,13 +998,28 @@ function commitNewTask() {
   newTaskInput.value = "";
   taskAddCard.classList.add("is-open");
   addTaskToggle.setAttribute("aria-expanded", "true");
+  schedulePersist();
   requestAnimationFrame(() => newTaskInput.focus());
 }
 
-function createTaskElement(title, done = false, id = null) {
+function settleWidgetHeightAfterTaskIntro(task, holdId) {
+  let settled = false;
+  const settle = () => {
+    if (settled) return;
+    settled = true;
+    task.classList.remove("is-new");
+    releaseDesktopWindowHeight(holdId);
+    settleWidgetHeight();
+  };
+
+  task.addEventListener("animationend", settle, { once: true });
+  window.setTimeout(settle, 480);
+}
+
+function createTaskElement(title, done = false, id = "") {
   const task = document.createElement("div");
-  task.dataset.taskId = String(id ?? nextLocalTaskId--);
   task.className = `task-item flex flex-col rounded-lg p-standard${done ? " is-done" : ""}`;
+  assignTaskId(task, "task", id);
   task.innerHTML = `
     <div class="task-head flex items-center justify-between">
       <div class="flex items-center gap-standard">
@@ -877,10 +1043,10 @@ function createTaskElement(title, done = false, id = null) {
   return task;
 }
 
-function createSubtaskElement(title, done = false, id = null) {
+function createSubtaskElement(title, done = false, id = "") {
   const row = document.createElement("div");
-  row.dataset.taskId = String(id ?? nextLocalTaskId--);
   row.className = "subtask-row flex items-center gap-standard";
+  assignTaskId(row, "subtask", id);
   row.innerHTML = `
     <button aria-label="Complete subtask" class="complete-toggle ${done ? "is-checked text-primary" : "text-outline hover:text-primary transition-colors"} flex items-center justify-center" type="button">
       <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${done ? 1 : 0};">${done ? "check_circle" : "circle"}</span>
@@ -900,13 +1066,15 @@ function removeTask(task, startOffset = 0) {
 
   const previousRects = snapshotMovables();
   const previousHeight = snapshotWidgetHeight();
+  const holdId = holdDesktopWindowHeight(previousHeight);
   let removed = false;
   const finish = () => {
     if (removed) return;
     removed = true;
     task.remove();
     animateListShift(previousRects);
-    animateWidgetHeightAfterListShift(previousHeight);
+    animateWidgetHeightAfterListShift(previousHeight, holdId);
+    schedulePersist();
   };
 
   task.style.transform = `translateX(${startOffset}px)`;
@@ -928,6 +1096,7 @@ function removeSubtask(row, startOffset = 0) {
   const task = row.closest(".task-item");
   const previousRects = snapshotMovables();
   const previousHeight = snapshotWidgetHeight();
+  const holdId = holdDesktopWindowHeight(previousHeight);
   let removed = false;
   const finish = () => {
     if (removed) return;
@@ -935,7 +1104,8 @@ function removeSubtask(row, startOffset = 0) {
     row.remove();
     normalizeTaskSubtasks(task);
     animateListShift(previousRects);
-    animateWidgetHeightAfterListShift(previousHeight);
+    animateWidgetHeightAfterListShift(previousHeight, holdId);
+    schedulePersist();
   };
 
   row.style.transform = `translateX(${startOffset}px)`;
@@ -1017,13 +1187,17 @@ function startEdit(item) {
   input.focus();
   input.select();
 
+  let finished = false;
   const finish = (save) => {
+    if (finished) return;
+    finished = true;
     const previousHeight = snapshotWidgetHeight();
     const next = save ? input.value.trim() : previousText;
     label.textContent = next || previousText;
     shell.replaceWith(label);
     item.classList.remove("is-editing");
     animateWidgetHeight(previousHeight);
+    if (save && label.textContent.trim() !== previousText) schedulePersist();
   };
 
   input.addEventListener("keydown", (event) => {
@@ -1058,12 +1232,10 @@ function startDrag() {
   swipeState = null;
   const { type, element, pointerId, currentX, currentY, sourceTask } = pendingDrag;
   document.body.classList.add("is-dragging-task");
+  holdDesktopWindowHeight(getWidgetMaxHeight());
   window.getSelection()?.removeAllRanges();
 
   const rect = element.getBoundingClientRect();
-  const scrollX = window.scrollX || window.pageXOffset;
-  const scrollY = window.scrollY || window.pageYOffset;
-
   const placeholder = document.createElement("div");
   placeholder.className = type === "task" ? "drop-main-placeholder" : "drop-subtask-placeholder";
   placeholder.style.height = `${rect.height}px`;
@@ -1078,12 +1250,13 @@ function startDrag() {
   ghost.removeAttribute("id");
   ghost.classList.add("drag-ghost", "is-dragging");
   Object.assign(ghost.style, {
-    position: "absolute",
-    left: "0",
-    top: "0",
+    position: "fixed",
+    left: `${rect.left}px`,
+    top: `${rect.top}px`,
     width: `${rect.width}px`,
+    height: `${rect.height}px`,
     margin: "0",
-    transform: `translate3d(${rect.left + scrollX}px, ${rect.top + scrollY}px, 0)`
+    transform: "translate3d(0, 0, 0)"
   });
 
   element.classList.add("is-dragging");
@@ -1102,36 +1275,25 @@ function startDrag() {
     offsetY: currentY - rect.top,
     dragWidth: rect.width,
     dragHeight: rect.height,
+    ghostLeft: rect.left,
+    ghostTop: rect.top,
     originalMargin: previousMargin,
     originalDisplay: previousDisplay,
     originalVisibility: previousVisibility,
-    mode: type === "task" ? "main" : "subtask"
+    mode: type === "task" ? "main" : "subtask",
+    targetTask: type === "subtask" ? sourceTask : null
   };
 
   pendingDrag = null;
-  moveDraggedItem(currentX, currentY);
-}
-
-function scheduleDraggedItemMove(clientX, clientY) {
-  pendingDragMove = { clientX, clientY };
-  if (dragMoveFrame) return;
-
-  dragMoveFrame = requestAnimationFrame(() => {
-    dragMoveFrame = 0;
-    if (!dragState || !pendingDragMove) return;
-    const { clientX: nextX, clientY: nextY } = pendingDragMove;
-    pendingDragMove = null;
-    moveDraggedItem(nextX, nextY);
-  });
 }
 
 function moveDraggedItem(clientX, clientY) {
-  const { element, ghost, offsetX, offsetY } = dragState;
-  const scrollX = window.scrollX || window.pageXOffset;
-  const scrollY = window.scrollY || window.pageYOffset;
+  const { element, ghost, offsetX, offsetY, ghostLeft, ghostTop } = dragState;
 
-  ghost.style.transform = `translate3d(${clientX + scrollX - offsetX}px, ${clientY + scrollY - offsetY}px, 0)`;
+  ghost.style.transform = `translate3d(${clientX - offsetX - ghostLeft}px, ${clientY - offsetY - ghostTop}px, 0)`;
 
+  const previousRects = snapshotMovables();
+  const previousHeight = snapshotWidgetHeight();
   clearDropTargets();
 
   const targetTask = getTaskUnderPointer(clientX, clientY);
@@ -1145,7 +1307,8 @@ function moveDraggedItem(clientX, clientY) {
     placeMainPlaceholder(clientY);
   }
 
-  applyWidgetHeight();
+  animateWidgetHeight(previousHeight);
+  animateListShift(previousRects);
 }
 
 function getTaskUnderPointer(clientX, clientY) {
@@ -1203,11 +1366,6 @@ function getSubtaskAfterElement(inner, clientY) {
 function finishDrag(event) {
   if (pendingDrag && pendingDrag.pointerId === event.pointerId) clearPendingDrag();
   if (!dragState || dragState.pointerId !== event.pointerId) return;
-  if (dragMoveFrame) {
-    cancelAnimationFrame(dragMoveFrame);
-    dragMoveFrame = 0;
-    pendingDragMove = null;
-  }
 
   const previousRects = snapshotMovables();
   const previousHeight = snapshotWidgetHeight();
@@ -1249,7 +1407,10 @@ function finishDrag(event) {
   animateListShift(previousRects);
   dragState = null;
   document.body.classList.remove("is-dragging-task");
+  releaseDesktopWindowHeight();
+  settleWidgetHeight();
   suppressNextClick = true;
+  schedulePersist();
 
   if (taskList.hasPointerCapture(event.pointerId)) taskList.releasePointerCapture(event.pointerId);
 }
@@ -1338,6 +1499,7 @@ function setSubtaskComplete(button, checked) {
   label.classList.toggle("line-through", checked);
   label.classList.toggle("text-outline", checked);
   label.classList.toggle("text-on-surface", !checked);
+  schedulePersist();
 }
 
 function setTaskDone(task, done) {
@@ -1350,6 +1512,7 @@ function setTaskDone(task, done) {
   void task.offsetWidth;
   task.classList.add("is-completing");
   animateWidgetHeight(previousHeight);
+  schedulePersist();
 }
 
 function updateTaskFromSubtasks(task, options = {}) {
@@ -1363,79 +1526,13 @@ function updateTaskFromSubtasks(task, options = {}) {
   if (!options.skipDone) setTaskDone(task, completed === rows.length);
 }
 
-function renderTasksFromBackend(tasks) {
-  if (!Array.isArray(tasks) || !tasks.length) {
-    backendLoaded = true;
-    ensurePrototypeTaskIds();
-    return;
-  }
-
-  getTaskItems().forEach((item) => item.remove());
-  tasks.forEach((taskData) => {
-    taskList.insertBefore(createTaskFromData(taskData), taskAddCard);
-  });
-  getTaskItems().forEach(normalizeTaskSubtasks);
-  backendLoaded = true;
-  settleWidgetHeight();
-}
-
-function createTaskFromData(taskData) {
-  const task = createTaskElement(taskData.title, Boolean(taskData.completed), taskData.id);
-  const inner = task.querySelector(".subtask-inner");
-  (taskData.children || []).forEach((child) => {
-    inner.appendChild(createSubtaskElement(child.title, Boolean(child.completed), child.id));
-  });
-  return task;
-}
-
-function ensurePrototypeTaskIds() {
-  getTaskItems().forEach((task) => {
-    if (!task.dataset.taskId) task.dataset.taskId = String(nextLocalTaskId--);
-    getSubtaskRows(task).forEach((row) => {
-      if (!row.dataset.taskId) row.dataset.taskId = String(nextLocalTaskId--);
-    });
-  });
-}
-
-function exportTasks() {
-  ensurePrototypeTaskIds();
-  return getTaskItems().map((task, index) => ({
-    id: Number(task.dataset.taskId),
-    parentId: -1,
-    title: getTaskTitle(task),
-    completed: isTaskDone(task),
-    sortOrder: index,
-    children: getSubtaskRows(task).map((row, childIndex) => ({
-      id: Number(row.dataset.taskId),
-      parentId: Number(task.dataset.taskId),
-      title: getSubtaskTitle(row),
-      completed: isSubtaskDone(row),
-      sortOrder: childIndex,
-      children: []
-    }))
-  }));
-}
-
-function initializeBackendBridge() {
-  if (!window.qt?.webChannelTransport || typeof QWebChannel === "undefined") {
-    ensurePrototypeTaskIds();
-    return;
-  }
-
-  new QWebChannel(window.qt.webChannelTransport, (channel) => {
-    todoBridge = channel.objects.todoBridge;
-    todoBridge.tasks(renderTasksFromBackend);
-  });
-}
-
-window.FloatingTODO = {
-  exportTasks
-};
-
 getTaskItems().forEach(normalizeTaskSubtasks);
-ensurePrototypeTaskIds();
-initializeBackendBridge();
+ensureTaskIds();
 initializeWidgetHeight();
+initializePersistence();
+if (typeof ResizeObserver !== "undefined") {
+  new ResizeObserver(() => syncDesktopWindowHeight()).observe(todoWidget);
+}
 window.addEventListener("load", settleWidgetHeight);
 window.addEventListener("resize", settleWidgetHeight);
 if (document.fonts?.ready) {
