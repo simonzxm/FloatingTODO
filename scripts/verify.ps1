@@ -136,8 +136,14 @@ if ($package -notmatch '"signAndEditExecutable":\s*false') {
   throw "electron-builder resource editing is enabled and may download winCodeSign toolsets on this host"
 }
 
-if ($package -notmatch "PreserveOverlay" -and ((Get-Content -Path (Join-Path $root "scripts/set-exe-icon.ps1") -Raw) -notmatch "Get-PeOverlayOffset")) {
+$iconScript = Get-Content -Path (Join-Path $root "scripts/set-exe-icon.ps1") -Raw
+
+if ($package -notmatch "PreserveOverlay" -and ($iconScript -notmatch "Get-PeOverlayOffset")) {
   throw "portable executable icon post-processing does not preserve the embedded app payload"
+}
+
+if ($iconScript -notmatch 'Remove-ResourceIconGroup\s+\$ExePath\s+103\s+1033') {
+  throw "portable executable icon post-processing does not remove the stale NSIS icon group"
 }
 
 if ($package -notmatch '"artifactName":\s*"FloatingTODO \$\{version\}\.\$\{ext\}"') {

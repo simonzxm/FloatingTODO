@@ -1,5 +1,6 @@
 param(
-  [string]$ExePath
+  [string]$ExePath,
+  [switch]$SkipStaleGroupRemoval
 )
 
 $ErrorActionPreference = "Stop"
@@ -127,12 +128,71 @@ function Test-BytesEqual([byte[]]$Left, [byte[]]$Right) {
   return $true
 }
 
+function Remove-ResourceIconGroup([string]$Path, [int]$GroupId, [int]$LanguageId) {
+  $source = @"
+using System;
+using System.Runtime.InteropServices;
+
+public static class ResourceEditor {
+  [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+  private static extern IntPtr BeginUpdateResource(string pFileName, bool bDeleteExistingResources);
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern bool UpdateResource(IntPtr hUpdate, IntPtr lpType, IntPtr lpName, ushort wLanguage, byte[] lpData, uint cbData);
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern bool EndUpdateResource(IntPtr hUpdate, bool fDiscard);
+
+  private static IntPtr MakeIntResource(int id) {
+    return new IntPtr(id);
+  }
+
+  public static void DeleteIconGroup(string path, int groupId, int languageId) {
+    IntPtr handle = BeginUpdateResource(path, false);
+    if (handle == IntPtr.Zero) {
+      throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+    }
+
+    bool completed = false;
+    try {
+      if (!UpdateResource(handle, MakeIntResource(14), MakeIntResource(groupId), (ushort)languageId, null, 0)) {
+        int error = Marshal.GetLastWin32Error();
+        if (error != 1813 && error != 87) {
+          throw new System.ComponentModel.Win32Exception(error);
+        }
+      }
+
+      if (!EndUpdateResource(handle, false)) {
+        throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+      }
+      completed = true;
+    }
+    finally {
+      if (!completed) {
+        EndUpdateResource(handle, true);
+      }
+    }
+  }
+}
+"@
+
+  if (-not ("ResourceEditor" -as [type])) {
+    Add-Type -TypeDefinition $source
+  }
+
+  [ResourceEditor]::DeleteIconGroup($Path, $GroupId, $LanguageId)
+}
+
 $originalOverlayOffset = Get-PeOverlayOffset $ExePath
 $originalOverlay = Read-TrailingBytes $ExePath $originalOverlayOffset
 
 & $rceditPath $ExePath --set-icon $iconPath
 if ($LASTEXITCODE -ne 0) {
   throw "rcedit failed with exit code $LASTEXITCODE"
+}
+
+if (-not $SkipStaleGroupRemoval) {
+  Remove-ResourceIconGroup $ExePath 103 1033
 }
 
 if ($originalOverlay.Length -gt 0) {

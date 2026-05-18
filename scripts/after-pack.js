@@ -18,7 +18,8 @@ exports.default = async function afterPack(context) {
       "-File",
       scriptPath,
       "-ExePath",
-      exePath
+      exePath,
+      "-SkipStaleGroupRemoval"
     ],
     {
       cwd: context.packager.projectDir,
