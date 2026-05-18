@@ -122,12 +122,24 @@ if ($main -notmatch "assets.*icon\.ico" -or $package -notmatch '"icon":\s*"asset
   throw "application icon is not wired into the tray and Windows build"
 }
 
+if ($package -match "set-exe-icon\.ps1|rcedit") {
+  throw "npm run dist still post-processes the portable executable and may truncate the embedded app payload"
+}
+
+if ($package -notmatch '"artifactName":\s*"FloatingTODO \$\{version\}\.\$\{ext\}"') {
+  throw "portable artifact name does not match the release asset name"
+}
+
 if ($main -notmatch "show:\s*false" -or $main -notmatch "ready-to-show" -or $main -notmatch "setOpacity\(0\)") {
   throw "main.js does not guard tray show against transparent-window flash"
 }
 
 if ($main -notmatch "fadeMainWindow\(1\)" -or $main -notmatch "fadeMainWindow\(0" -or $main -notmatch "WINDOW_FADE_MS") {
   throw "main.js does not animate both tray show and hide opacity"
+}
+
+if ($main -notmatch "floating-todo:window-visibility" -or $preload -notmatch "floating-todo-window-visibility" -or $styles -notmatch "is-window-hidden") {
+  throw "renderer-level show/hide transition is missing"
 }
 
 if ($main -notmatch "event\.preventDefault\(\);\s*hideMainWindow\(\);") {

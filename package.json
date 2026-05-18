@@ -22,6 +22,7 @@
     "directories": {
       "output": "dist"
     },
+    "artifactName": "FloatingTODO ${version}.${ext}",
     "files": [
       "main.js",
       "preload.js",

@@ -118,6 +118,10 @@ document.addEventListener("visibilitychange", () => {
   closeAddComposer(false);
 });
 
+window.addEventListener("floating-todo-window-visibility", (event) => {
+  document.body.classList.toggle("is-window-hidden", !event.detail?.visible);
+});
+
 taskList.addEventListener("pointerdown", (event) => {
   if (event.altKey) return;
   if (event.button !== 0 || isInteractiveTarget(event.target)) return;

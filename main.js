@@ -6,7 +6,7 @@ const WINDOW_WIDTH = 420;
 const INITIAL_WINDOW_HEIGHT = 655;
 const MIN_WINDOW_HEIGHT = 160;
 const SHOW_WINDOW_REVEAL_DELAY_MS = 48;
-const WINDOW_FADE_MS = 120;
+const WINDOW_FADE_MS = 220;
 const USER_DATA_DIR_NAME = "FloatingTODO";
 const LEGACY_USER_DATA_DIR_NAMES = ["electron-floating-todo", "floatingtodo"];
 const DEFAULT_TASK_TITLES = ["Design System Review", "Weekly Sync Prep", "Buy Groceries"];
@@ -17,6 +17,7 @@ let tray = null;
 let isQuitting = false;
 let lastContentHeight = INITIAL_WINDOW_HEIGHT;
 let windowFadeTimer = null;
+let windowHideTimer = null;
 
 function createTrayIcon() {
   const assetIcon = nativeImage.createFromPath(APP_ICON_PATH);
@@ -35,10 +36,12 @@ function showMainWindow() {
   if (!mainWindow) return;
   if (mainWindow.isMinimized()) mainWindow.restore();
   clearWindowFade();
+  clearWindowHide();
   mainWindow.setOpacity(0);
   mainWindow.setContentSize(WINDOW_WIDTH, lastContentHeight, false);
   mainWindow.show();
   mainWindow.focus();
+  setRendererWindowVisible(true);
   setTimeout(() => {
     if (!mainWindow?.isVisible()) return;
     fadeMainWindow(1);
@@ -48,16 +51,29 @@ function showMainWindow() {
 
 function hideMainWindow() {
   if (!mainWindow?.isVisible()) return;
+  clearWindowHide();
+  setRendererWindowVisible(false);
   fadeMainWindow(0, () => {
     mainWindow?.hide();
     updateTrayMenu();
   });
 }
 
+function setRendererWindowVisible(visible) {
+  if (!mainWindow || mainWindow.webContents.isDestroyed()) return;
+  mainWindow.webContents.send("floating-todo:window-visibility", visible);
+}
+
 function clearWindowFade() {
   if (!windowFadeTimer) return;
   clearInterval(windowFadeTimer);
   windowFadeTimer = null;
+}
+
+function clearWindowHide() {
+  if (!windowHideTimer) return;
+  clearTimeout(windowHideTimer);
+  windowHideTimer = null;
 }
 
 function fadeMainWindow(targetOpacity, done) {
@@ -80,7 +96,10 @@ function fadeMainWindow(targetOpacity, done) {
     if (progress >= 1) {
       clearWindowFade();
       mainWindow.setOpacity(targetOpacity);
-      done?.();
+      windowHideTimer = setTimeout(() => {
+        windowHideTimer = null;
+        done?.();
+      }, 0);
     }
   }, 16);
 }
