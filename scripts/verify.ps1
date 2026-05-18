@@ -126,6 +126,10 @@ if ($main -notmatch "show:\s*false" -or $main -notmatch "ready-to-show" -or $mai
   throw "main.js does not guard tray show against transparent-window flash"
 }
 
+if ($main -notmatch "fadeMainWindow\(1\)" -or $main -notmatch "fadeMainWindow\(0" -or $main -notmatch "WINDOW_FADE_MS") {
+  throw "main.js does not animate both tray show and hide opacity"
+}
+
 if ($main -notmatch "event\.preventDefault\(\);\s*hideMainWindow\(\);") {
   throw "main.js does not hide the widget instead of quitting on close"
 }

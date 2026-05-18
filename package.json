@@ -33,6 +33,10 @@
       "icon": "assets/icon.ico",
       "target": "portable",
       "signAndEditExecutable": false
+    },
+    "nsis": {
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
     }
   },
   "devDependencies": {

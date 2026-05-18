@@ -6,6 +6,7 @@ const WINDOW_WIDTH = 420;
 const INITIAL_WINDOW_HEIGHT = 655;
 const MIN_WINDOW_HEIGHT = 160;
 const SHOW_WINDOW_REVEAL_DELAY_MS = 48;
+const WINDOW_FADE_MS = 120;
 const USER_DATA_DIR_NAME = "FloatingTODO";
 const LEGACY_USER_DATA_DIR_NAMES = ["electron-floating-todo", "floatingtodo"];
 const DEFAULT_TASK_TITLES = ["Design System Review", "Weekly Sync Prep", "Buy Groceries"];
@@ -15,6 +16,7 @@ let mainWindow = null;
 let tray = null;
 let isQuitting = false;
 let lastContentHeight = INITIAL_WINDOW_HEIGHT;
+let windowFadeTimer = null;
 
 function createTrayIcon() {
   const assetIcon = nativeImage.createFromPath(APP_ICON_PATH);
@@ -32,22 +34,55 @@ function createTrayIcon() {
 function showMainWindow() {
   if (!mainWindow) return;
   if (mainWindow.isMinimized()) mainWindow.restore();
+  clearWindowFade();
   mainWindow.setOpacity(0);
   mainWindow.setContentSize(WINDOW_WIDTH, lastContentHeight, false);
   mainWindow.show();
   mainWindow.focus();
   setTimeout(() => {
     if (!mainWindow?.isVisible()) return;
-    mainWindow.setOpacity(1);
+    fadeMainWindow(1);
     updateTrayMenu();
   }, SHOW_WINDOW_REVEAL_DELAY_MS);
 }
 
 function hideMainWindow() {
   if (!mainWindow?.isVisible()) return;
-  mainWindow.setOpacity(0);
-  mainWindow.hide();
-  updateTrayMenu();
+  fadeMainWindow(0, () => {
+    mainWindow?.hide();
+    updateTrayMenu();
+  });
+}
+
+function clearWindowFade() {
+  if (!windowFadeTimer) return;
+  clearInterval(windowFadeTimer);
+  windowFadeTimer = null;
+}
+
+function fadeMainWindow(targetOpacity, done) {
+  if (!mainWindow) return;
+  clearWindowFade();
+  const startOpacity = mainWindow.getOpacity();
+  const startedAt = Date.now();
+
+  windowFadeTimer = setInterval(() => {
+    if (!mainWindow) {
+      clearWindowFade();
+      return;
+    }
+
+    const progress = Math.min(1, (Date.now() - startedAt) / WINDOW_FADE_MS);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const nextOpacity = startOpacity + (targetOpacity - startOpacity) * eased;
+    mainWindow.setOpacity(nextOpacity);
+
+    if (progress >= 1) {
+      clearWindowFade();
+      mainWindow.setOpacity(targetOpacity);
+      done?.();
+    }
+  }, 16);
 }
 
 function getLaunchAtLogin() {
