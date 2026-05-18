@@ -9,6 +9,7 @@ const SHOW_WINDOW_REVEAL_DELAY_MS = 48;
 const USER_DATA_DIR_NAME = "FloatingTODO";
 const LEGACY_USER_DATA_DIR_NAMES = ["electron-floating-todo", "floatingtodo"];
 const DEFAULT_TASK_TITLES = ["Design System Review", "Weekly Sync Prep", "Buy Groceries"];
+const APP_ICON_PATH = path.join(__dirname, "assets", "icon.ico");
 
 let mainWindow = null;
 let tray = null;
@@ -16,13 +17,16 @@ let isQuitting = false;
 let lastContentHeight = INITIAL_WINDOW_HEIGHT;
 
 function createTrayIcon() {
-  const svg = `
+  const assetIcon = nativeImage.createFromPath(APP_ICON_PATH);
+  if (!assetIcon.isEmpty()) return assetIcon;
+
+  const fallbackSvg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
       <rect width="64" height="64" rx="16" fill="#406651"/>
       <path d="M18 34.5 27 43l19-22" fill="none" stroke="#f8f9ff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   `;
-  return nativeImage.createFromDataURL(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
+  return nativeImage.createFromDataURL(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(fallbackSvg)}`);
 }
 
 function showMainWindow() {
@@ -124,6 +128,7 @@ function createWindow() {
     resizable: false,
     skipTaskbar: true,
     title: "FloatingTODO",
+    icon: APP_ICON_PATH,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,

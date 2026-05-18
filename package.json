@@ -25,10 +25,12 @@
     "files": [
       "main.js",
       "preload.js",
+      "assets/**/*",
       "renderer/**/*",
       "package.json"
     ],
     "win": {
+      "icon": "assets/icon.ico",
       "target": "portable",
       "signAndEditExecutable": false
     }

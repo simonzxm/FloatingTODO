@@ -208,7 +208,13 @@ body.is-alt-window-dragging .task-list * {
   min-width: 0;
   flex: 1;
 }
-.task-item:not(.is-done):not(.add-task-card):hover:not(:has(.subtask-row:hover)),
+.task-item:not(.is-done):not(.add-task-card):hover:not(:has(.subtask-row:hover)) {
+  background:
+    linear-gradient(rgba(193,237,209,.22), rgba(193,237,209,.22)),
+    rgba(255,255,255,.56);
+  border-color: transparent;
+  box-shadow: none;
+}
 .subtask-row:hover {
   background:
     linear-gradient(rgba(193,237,209,.22), rgba(193,237,209,.22)),

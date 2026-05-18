@@ -5,6 +5,8 @@ $required = @(
   "package.json",
   "main.js",
   "preload.js",
+  "assets/icon.svg",
+  "assets/icon.ico",
   "renderer/index.html",
   "renderer/styles.css",
   "renderer/state.js",
@@ -26,6 +28,7 @@ foreach ($relative in $required) {
 $indexPath = Join-Path $root "renderer/index.html"
 $index = Get-Content -Path $indexPath -Raw
 $styles = Get-Content -Path (Join-Path $root "renderer/styles.css") -Raw
+$package = Get-Content -Path (Join-Path $root "package.json") -Raw
 $scriptFiles = @(
   "renderer/state.js",
   "renderer/data.js",
@@ -115,6 +118,10 @@ if ($main -notmatch "\bTray\b" -or $main -notmatch "setContextMenu" -or $main -n
   throw "main.js does not provide tray menu or startup toggle behavior"
 }
 
+if ($main -notmatch "assets.*icon\.ico" -or $package -notmatch '"icon":\s*"assets/icon\.ico"') {
+  throw "application icon is not wired into the tray and Windows build"
+}
+
 if ($main -notmatch "show:\s*false" -or $main -notmatch "ready-to-show" -or $main -notmatch "setOpacity\(0\)") {
   throw "main.js does not guard tray show against transparent-window flash"
 }
@@ -183,8 +190,12 @@ if ($styles -notmatch "\.subtask-inner\s*\{[\s\S]*?gap:\s*0;") {
   throw "subtask hit regions do not split the space between rows"
 }
 
-if ($styles -notmatch "\.task-item:not\(\.is-done\):not\(\.add-task-card\):hover:not\(:has\(\.subtask-row:hover\)\),\s*\.subtask-row:hover\s*\{[\s\S]*?linear-gradient\(rgba\(193,237,209,\.22\)") {
-  throw "unfinished parent hover and subtask hover do not share the same light green rule"
+if ($styles -notmatch "\.task-item:not\(\.is-done\):not\(\.add-task-card\):hover:not\(:has\(\.subtask-row:hover\)\)\s*\{[\s\S]*?border-color:\s*transparent;[\s\S]*?box-shadow:\s*none;") {
+  throw "unfinished parent hover still keeps an outer selected border"
+}
+
+if ($styles -notmatch "\.subtask-row:hover\s*\{[\s\S]*?box-shadow:\s*inset 0 0 0 1px rgba\(64,102,81,\.18\)") {
+  throw "subtask hover does not keep the second-level selected border"
 }
 
 if ($styles -notmatch "\.task-item\.is-subtask-target\s*\{[\s\S]*?linear-gradient\(rgba\(193,237,209,\.22\)") {
