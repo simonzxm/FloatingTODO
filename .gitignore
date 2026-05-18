@@ -4,6 +4,8 @@ build-msvc-webengine/
 .deps/
 .ifw-cache/
 docs/superpowers/
+FloatingTODO-qt-backup/
+FloatingTODO-electron-build-artifacts/
 
 # Legacy/local prototype sources kept out of the Electron release branch.
 CMakeLists.txt
@@ -19,9 +21,9 @@ cmake_install.cmake
 compile_commands.json
 
 # Electron local state and build output.
-**/node_modules/
-**/.cache/
-**/dist/
+node_modules/
+.cache/
+dist/
 package-lock.json.tmp
 
 *.user

@@ -2,7 +2,7 @@
 
 ## Scope
 
-The maintained application is the Electron desktop widget in `electron-floating-todo/`. Do not add Qt dependencies or Qt-specific build steps to this release line.
+The maintained application is the Electron desktop widget at the repository root. Do not add Qt dependencies or Qt-specific build steps to this release line.
 
 ## Formatting
 
@@ -36,7 +36,6 @@ The maintained application is the Electron desktop widget in `electron-floating-
 Before packaging or release, run:
 
 ```powershell
-cd electron-floating-todo
 npm run smoke
 node --check main.js
 node --check preload.js

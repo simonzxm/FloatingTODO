@@ -1,6 +1,6 @@
 # FloatingTODO
 
-FloatingTODO is a frameless Electron desktop todo widget built from the original HTML prototype in `floating-todo-header-add-3-2.html`. The active application lives in `electron-floating-todo/`.
+FloatingTODO is a frameless Electron desktop todo widget built from the original HTML prototype in `floating-todo-header-add-3-2.html`. The Electron app is the repository root.
 
 ## Features
 
@@ -21,7 +21,6 @@ FloatingTODO is a frameless Electron desktop todo widget built from the original
 ## Development
 
 ```powershell
-cd electron-floating-todo
 npm install
 npm start
 ```
@@ -29,7 +28,6 @@ npm start
 ## Checks
 
 ```powershell
-cd electron-floating-todo
 npm run smoke
 node --check main.js
 node --check preload.js
@@ -38,14 +36,13 @@ node --check preload.js
 ## Packaging
 
 ```powershell
-cd electron-floating-todo
 npm run dist
 ```
 
 The portable executable is written to:
 
 ```text
-electron-floating-todo/dist/FloatingTODO 0.1.0.exe
+dist/FloatingTODO 0.1.0.exe
 ```
 
 ## Persistence
@@ -61,13 +58,12 @@ The file stores task order, completion state, collapsed state, and subtasks.
 ## Project Layout
 
 ```text
-electron-floating-todo/
-  main.js                 Electron main process and persistence IPC
-  preload.js              Safe renderer bridge
-  renderer/index.html     Single-file widget UI copied from the prototype
-  scripts/smoke-check.ps1 Regression checks for key desktop behaviors
+main.js                 Electron main process and persistence IPC
+preload.js              Safe renderer bridge
+renderer/index.html     Single-file widget UI copied from the prototype
+scripts/smoke-check.ps1 Regression checks for key desktop behaviors
 ```
 
 ## Notes
 
-The historical Qt/CMake prototype is intentionally excluded from this release branch. The shipped desktop component is Electron-based.
+The historical Qt/CMake prototype has been backed up outside this repository at `D:\Projects\FloatingTODO-qt-backup`. The shipped desktop component is Electron-based.
