@@ -14,7 +14,7 @@
     "start": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue; electron .\"",
     "check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify.ps1",
     "smoke": "npm run check",
-    "dist": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$env:ELECTRON_BUILDER_CACHE=(Join-Path $PWD '.cache/electron-builder'); electron-builder --win portable\""
+    "dist": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$env:ELECTRON_BUILDER_CACHE=(Join-Path $PWD '.cache/electron-builder'); electron-builder --win portable; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-exe-icon.ps1\""
   },
   "build": {
     "appId": "io.github.whyself.floatingtodo",
@@ -23,6 +23,7 @@
       "output": "dist"
     },
     "artifactName": "FloatingTODO ${version}.${ext}",
+    "afterPack": "scripts/after-pack.js",
     "files": [
       "main.js",
       "preload.js",

@@ -7,6 +7,8 @@ $required = @(
   "preload.js",
   "assets/icon.svg",
   "assets/icon.ico",
+  "scripts/after-pack.js",
+  "scripts/set-exe-icon.ps1",
   "renderer/index.html",
   "renderer/styles.css",
   "renderer/state.js",
@@ -122,8 +124,20 @@ if ($main -notmatch "assets.*icon\.ico" -or $package -notmatch '"icon":\s*"asset
   throw "application icon is not wired into the tray and Windows build"
 }
 
-if ($package -match "set-exe-icon\.ps1|rcedit") {
-  throw "npm run dist still post-processes the portable executable and may truncate the embedded app payload"
+if ($package -notmatch "set-exe-icon\.ps1") {
+  throw "npm run dist does not post-process the portable executable icon"
+}
+
+if ($package -notmatch '"afterPack":\s*"scripts/after-pack\.js"') {
+  throw "Windows build does not update the inner packaged executable icon before portable packaging"
+}
+
+if ($package -notmatch '"signAndEditExecutable":\s*false') {
+  throw "electron-builder resource editing is enabled and may download winCodeSign toolsets on this host"
+}
+
+if ($package -notmatch "PreserveOverlay" -and ((Get-Content -Path (Join-Path $root "scripts/set-exe-icon.ps1") -Raw) -notmatch "Get-PeOverlayOffset")) {
+  throw "portable executable icon post-processing does not preserve the embedded app payload"
 }
 
 if ($package -notmatch '"artifactName":\s*"FloatingTODO \$\{version\}\.\$\{ext\}"') {
