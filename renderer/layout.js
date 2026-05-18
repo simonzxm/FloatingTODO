@@ -28,7 +28,7 @@ function animateListShift(previousRects, options = {}) {
 }
 
 function getWidgetMaxHeight() {
-  return Math.min(615, Math.max(240, (window.screen?.availHeight || 695) - 80));
+  return Math.max(240, (window.screen?.availHeight || 10000) - 40);
 }
 
 function measureWidgetContentHeight() {

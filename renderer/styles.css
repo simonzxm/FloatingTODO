@@ -17,7 +17,6 @@ body.is-dragging-task,
 .task-list {
   position: relative;
   inline-size: 380px;
-  max-block-size: min(615px, calc(100vh - 40px));
   height: auto;
   transform-origin: top center;
   display: flex;

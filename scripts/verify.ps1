@@ -63,6 +63,10 @@ if ($renderer -match "background-image:\s*url") {
   throw "renderer/index.html still contains the source mock background image"
 }
 
+if ($styles -match "max-block-size" -or $scripts -match "Math\.min\(615") {
+  throw "renderer still contains the old fixed maximum height limit"
+}
+
 if ($scripts -notmatch "const todoWidget = taskList;") {
   throw "renderer scripts do not route height logic to taskList"
 }
@@ -95,7 +99,7 @@ if ($main -match "show:\s*false|showInactive\(\)") {
   throw "main.js still uses inactive desktop-component window startup"
 }
 
-if ($main -match "focusable:\s*false|skipTaskbar:\s*true") {
+if ($main -match "focusable:\s*false") {
   throw "main.js still configures the window as non-focus-stealing desktop component"
 }
 
@@ -103,8 +107,16 @@ if ($main -match "SetWindowPos|\[IntPtr\]1|sendWindowToBottom") {
   throw "main.js still forces the window to the bottom layer"
 }
 
-if ($main -notmatch "skipTaskbar:\s*false") {
-  throw "main.js does not restore normal taskbar window behavior"
+if ($main -notmatch "skipTaskbar:\s*true") {
+  throw "main.js does not configure the widget as a tray-resident taskbar-free window"
+}
+
+if ($main -notmatch "\bTray\b" -or $main -notmatch "setContextMenu" -or $main -notmatch "setLoginItemSettings") {
+  throw "main.js does not provide tray menu or startup toggle behavior"
+}
+
+if ($main -notmatch "event\.preventDefault\(\);\s*hideMainWindow\(\);") {
+  throw "main.js does not hide the widget instead of quitting on close"
 }
 
 if ($scripts -notmatch "event\.altKey") {

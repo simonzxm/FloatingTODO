@@ -108,9 +108,14 @@ document.addEventListener("keyup", (event) => {
   if (event.key === "Alt") setAltWindowDrag(false);
 });
 
-window.addEventListener("blur", () => setAltWindowDrag(false));
+window.addEventListener("blur", () => {
+  setAltWindowDrag(false);
+  closeAddComposer(false);
+});
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) setAltWindowDrag(false);
+  if (!document.hidden) return;
+  setAltWindowDrag(false);
+  closeAddComposer(false);
 });
 
 taskList.addEventListener("pointerdown", (event) => {

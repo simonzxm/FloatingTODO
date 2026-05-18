@@ -5,6 +5,8 @@ FloatingTODO is a frameless Electron desktop todo widget built from the original
 ## Features
 
 - Fixed-width transparent desktop widget.
+- Tray-resident workflow that stays out of the taskbar.
+- Tray menu with show, hide, launch-at-login, and quit actions.
 - Alt-drag window movement.
 - Main task and subtask drag sorting.
 - Add, edit, delete, complete, collapse, and expand interactions.
@@ -54,6 +56,15 @@ Tasks are saved as JSON in Electron's user data directory:
 ```
 
 The file stores task order, completion state, collapsed state, and subtasks.
+
+## Tray Behavior
+
+FloatingTODO is designed as a long-running desktop component:
+
+- The widget does not occupy the taskbar.
+- Closing the widget hides it instead of quitting.
+- Use the tray icon to show or hide the widget.
+- Use the tray menu to toggle launch at login or quit completely.
 
 ## Project Layout
 
