@@ -5,9 +5,15 @@ const path = require("node:path");
 const WINDOW_WIDTH = 420;
 const INITIAL_WINDOW_HEIGHT = 655;
 const MIN_WINDOW_HEIGHT = 160;
+const SHOW_WINDOW_REVEAL_DELAY_MS = 48;
+const USER_DATA_DIR_NAME = "FloatingTODO";
+const LEGACY_USER_DATA_DIR_NAMES = ["electron-floating-todo", "floatingtodo"];
+const DEFAULT_TASK_TITLES = ["Design System Review", "Weekly Sync Prep", "Buy Groceries"];
+
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
+let lastContentHeight = INITIAL_WINDOW_HEIGHT;
 
 function createTrayIcon() {
   const svg = `
@@ -22,12 +28,22 @@ function createTrayIcon() {
 function showMainWindow() {
   if (!mainWindow) return;
   if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.setOpacity(0);
+  mainWindow.setContentSize(WINDOW_WIDTH, lastContentHeight, false);
   mainWindow.show();
   mainWindow.focus();
+  setTimeout(() => {
+    if (!mainWindow?.isVisible()) return;
+    mainWindow.setOpacity(1);
+    updateTrayMenu();
+  }, SHOW_WINDOW_REVEAL_DELAY_MS);
 }
 
 function hideMainWindow() {
-  mainWindow?.hide();
+  if (!mainWindow?.isVisible()) return;
+  mainWindow.setOpacity(0);
+  mainWindow.hide();
+  updateTrayMenu();
 }
 
 function getLaunchAtLogin() {
@@ -48,7 +64,7 @@ function updateTrayMenu() {
 
   tray.setContextMenu(Menu.buildFromTemplate([
     {
-      label: windowVisible ? "隐藏 FloatingTODO" : "显示 FloatingTODO",
+      label: windowVisible ? "\u9690\u85cf FloatingTODO" : "\u663e\u793a FloatingTODO",
       click: () => {
         if (mainWindow?.isVisible()) hideMainWindow();
         else showMainWindow();
@@ -56,7 +72,7 @@ function updateTrayMenu() {
       }
     },
     {
-      label: "开机自启",
+      label: "\u5f00\u673a\u81ea\u542f",
       type: "checkbox",
       checked: launchAtLogin,
       click: (menuItem) => {
@@ -66,7 +82,7 @@ function updateTrayMenu() {
     },
     { type: "separator" },
     {
-      label: "退出",
+      label: "\u9000\u51fa",
       click: () => {
         isQuitting = true;
         app.quit();
@@ -103,6 +119,8 @@ function createWindow() {
     transparent: true,
     backgroundColor: "#00000000",
     hasShadow: false,
+    show: false,
+    opacity: 0,
     resizable: false,
     skipTaskbar: true,
     title: "FloatingTODO",
@@ -124,6 +142,8 @@ function createWindow() {
       }
     `).catch(() => {});
   });
+  mainWindow = win;
+  win.once("ready-to-show", showMainWindow);
   win.on("show", updateTrayMenu);
   win.on("hide", updateTrayMenu);
   win.on("close", (event) => {
@@ -132,7 +152,6 @@ function createWindow() {
     hideMainWindow();
   });
   win.loadFile(path.join(__dirname, "renderer", "index.html"));
-  mainWindow = win;
   return win;
 }
 
@@ -140,15 +159,67 @@ function getWindowFromEvent(event) {
   return BrowserWindow.fromWebContents(event.sender);
 }
 
+function getStableUserDataPath() {
+  return path.join(app.getPath("appData"), USER_DATA_DIR_NAME);
+}
+
 function getTasksFilePath() {
   return path.join(app.getPath("userData"), "tasks.json");
 }
 
+function getLegacyTasksFilePaths() {
+  const appData = app.getPath("appData");
+  const currentTasksFile = getTasksFilePath();
+  return LEGACY_USER_DATA_DIR_NAMES
+    .map((dirName) => path.join(appData, dirName, "tasks.json"))
+    .filter((tasksFile) => tasksFile !== currentTasksFile);
+}
+
+async function readTasksFile(tasksFile) {
+  const raw = await fs.readFile(tasksFile, "utf8");
+  const parsed = JSON.parse(raw);
+  return Array.isArray(parsed?.tasks) ? parsed.tasks : null;
+}
+
+function isDefaultSeedTasks(tasks) {
+  if (!Array.isArray(tasks) || tasks.length !== DEFAULT_TASK_TITLES.length) return false;
+  return DEFAULT_TASK_TITLES.every((title, index) => tasks[index]?.title === title);
+}
+
+async function findLegacyTasks() {
+  const candidates = [];
+
+  for (const tasksFile of getLegacyTasksFilePaths()) {
+    try {
+      const stat = await fs.stat(tasksFile);
+      const tasks = await readTasksFile(tasksFile);
+      if (Array.isArray(tasks) && tasks.length && !isDefaultSeedTasks(tasks)) {
+        candidates.push({ tasks, mtimeMs: stat.mtimeMs });
+      }
+    } catch (error) {
+      if (error?.code !== "ENOENT") console.error("Failed to inspect legacy tasks:", error);
+    }
+  }
+
+  candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
+  return candidates[0]?.tasks || null;
+}
+
+async function migratePersistedTasks() {
+  try {
+    const currentTasks = await readTasksFile(getTasksFilePath());
+    if (Array.isArray(currentTasks) && currentTasks.length && !isDefaultSeedTasks(currentTasks)) return;
+  } catch (error) {
+    if (error?.code !== "ENOENT") console.error("Failed to inspect current tasks:", error);
+  }
+
+  const legacyTasks = await findLegacyTasks();
+  if (legacyTasks) await writePersistedTasks(legacyTasks);
+}
+
 async function readPersistedTasks() {
   try {
-    const raw = await fs.readFile(getTasksFilePath(), "utf8");
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed?.tasks) ? parsed.tasks : null;
+    return await readTasksFile(getTasksFilePath());
   } catch (error) {
     if (error?.code === "ENOENT") return null;
     console.error("Failed to load persisted tasks:", error);
@@ -177,6 +248,7 @@ ipcMain.on("floating-todo:resize-to-content", (event, height) => {
   const display = screen.getDisplayMatching(win.getBounds());
   const maxHeight = Math.max(MIN_WINDOW_HEIGHT, display.workArea.height - 24);
   const nextHeight = Math.max(MIN_WINDOW_HEIGHT, Math.min(Math.ceil(Number(height) || MIN_WINDOW_HEIGHT), maxHeight));
+  lastContentHeight = nextHeight;
   const [, currentHeight] = win.getContentSize();
   if (Math.abs(currentHeight - nextHeight) < 2) return;
   win.setContentSize(WINDOW_WIDTH, nextHeight, false);
@@ -186,8 +258,10 @@ ipcMain.handle("floating-todo:load-tasks", async () => readPersistedTasks());
 
 ipcMain.handle("floating-todo:save-tasks", async (_event, tasks) => writePersistedTasks(tasks));
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  app.setPath("userData", getStableUserDataPath());
   app.setAppUserModelId("io.github.whyself.floatingtodo");
+  await migratePersistedTasks();
   createWindow();
   createTray();
 

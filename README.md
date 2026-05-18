@@ -56,6 +56,7 @@ Tasks are saved as JSON in Electron's user data directory:
 ```
 
 The file stores task order, completion state, collapsed state, and subtasks.
+Older development builds used `%APPDATA%\electron-floating-todo\tasks.json` and `%APPDATA%\floatingtodo\tasks.json`; the app migrates non-default task data from those legacy paths on startup.
 
 ## Tray Behavior
 

@@ -95,7 +95,7 @@ if ($main -match "alwaysOnTop|setAlwaysOnTop") {
   throw "main.js still forces the window to stay on top"
 }
 
-if ($main -match "show:\s*false|showInactive\(\)") {
+if ($main -match "showInactive\(\)") {
   throw "main.js still uses inactive desktop-component window startup"
 }
 
@@ -115,8 +115,16 @@ if ($main -notmatch "\bTray\b" -or $main -notmatch "setContextMenu" -or $main -n
   throw "main.js does not provide tray menu or startup toggle behavior"
 }
 
+if ($main -notmatch "show:\s*false" -or $main -notmatch "ready-to-show" -or $main -notmatch "setOpacity\(0\)") {
+  throw "main.js does not guard tray show against transparent-window flash"
+}
+
 if ($main -notmatch "event\.preventDefault\(\);\s*hideMainWindow\(\);") {
   throw "main.js does not hide the widget instead of quitting on close"
+}
+
+if ($main -notmatch 'setPath\("userData"' -or $main -notmatch "LEGACY_USER_DATA_DIR_NAMES") {
+  throw "main.js does not pin userData or migrate legacy task files"
 }
 
 if ($scripts -notmatch "event\.altKey") {
