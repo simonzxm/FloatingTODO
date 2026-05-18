@@ -1,8 +1,8 @@
 {
-  "name": "electron-floating-todo",
+  "name": "floatingtodo",
   "version": "0.1.0",
   "private": true,
-  "description": "Electron desktop shell for the FloatingTODO web component.",
+  "description": "Frameless Electron desktop todo widget.",
   "author": "FloatingTODO",
   "homepage": "https://github.com/whyself/FloatingTODO",
   "repository": {
@@ -12,11 +12,12 @@
   "main": "main.js",
   "scripts": {
     "start": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue; electron .\"",
-    "smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-check.ps1",
+    "check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify.ps1",
+    "smoke": "npm run check",
     "dist": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$env:ELECTRON_BUILDER_CACHE=(Join-Path $PWD '.cache/electron-builder'); electron-builder --win portable\""
   },
   "build": {
-    "appId": "local.floatingtodo.electron",
+    "appId": "io.github.whyself.floatingtodo",
     "productName": "FloatingTODO",
     "directories": {
       "output": "dist"

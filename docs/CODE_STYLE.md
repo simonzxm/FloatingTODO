@@ -20,7 +20,8 @@ The maintained application is the Electron desktop widget at the repository root
 
 ## Renderer Rules
 
-- Keep the widget UI in `renderer/index.html` unless the project deliberately adopts a build pipeline.
+- Keep markup, styles, and behavior split across `renderer/index.html`, `renderer/styles.css`, and focused renderer scripts.
+- Prefer adding behavior to the narrowest renderer script instead of growing `renderer/app.js`.
 - Preserve the original frontend structure where possible; Electron-specific behavior should be added narrowly.
 - Any drag, collapse, delete, or add animation change must account for adaptive window height and clipping.
 - Avoid adding new visual containers around the cards unless the animation model is updated at the same time.
@@ -36,7 +37,7 @@ The maintained application is the Electron desktop widget at the repository root
 Before packaging or release, run:
 
 ```powershell
-npm run smoke
+npm run check
 node --check main.js
 node --check preload.js
 ```

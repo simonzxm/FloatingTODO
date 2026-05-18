@@ -1,6 +1,6 @@
 # FloatingTODO
 
-FloatingTODO is a frameless Electron desktop todo widget built from the original HTML prototype in `floating-todo-header-add-3-2.html`. The Electron app is the repository root.
+FloatingTODO is a frameless Electron desktop todo widget built from the original HTML prototype in `docs/reference/prototype.html`. The Electron app is the repository root.
 
 ## Features
 
@@ -28,7 +28,7 @@ npm start
 ## Checks
 
 ```powershell
-npm run smoke
+npm run check
 node --check main.js
 node --check preload.js
 ```
@@ -60,8 +60,16 @@ The file stores task order, completion state, collapsed state, and subtasks.
 ```text
 main.js                 Electron main process and persistence IPC
 preload.js              Safe renderer bridge
-renderer/index.html     Single-file widget UI copied from the prototype
-scripts/smoke-check.ps1 Regression checks for key desktop behaviors
+renderer/index.html     Widget markup
+renderer/styles.css     Widget visual states and animation styles
+renderer/state.js       Shared DOM references and runtime state
+renderer/data.js        Task serialization and persistence helpers
+renderer/layout.js      Adaptive height and list shift animation helpers
+renderer/task-actions.js Add, edit, delete, and swipe actions
+renderer/drag.js        Long-press drag and drop behavior
+renderer/completion.js  Completion, progress, and task state helpers
+renderer/app.js         Event wiring and startup
+scripts/verify.ps1      Regression checks for key desktop behaviors
 ```
 
 ## Notes
