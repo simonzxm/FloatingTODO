@@ -10,7 +10,8 @@ const WINDOW_FADE_MS = 220;
 const USER_DATA_DIR_NAME = "FloatingTODO";
 const LEGACY_USER_DATA_DIR_NAMES = ["electron-floating-todo", "floatingtodo"];
 const DEFAULT_TASK_TITLES = ["Design System Review", "Weekly Sync Prep", "Buy Groceries"];
-const APP_ICON_PATH = path.join(__dirname, "assets", "icon.ico");
+const IS_MAC = process.platform === "darwin";
+const APP_ICON_PATH = path.join(__dirname, "assets", IS_MAC ? "icon.png" : "icon.ico");
 
 let mainWindow = null;
 let tray = null;
