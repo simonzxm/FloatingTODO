@@ -11,7 +11,8 @@ const USER_DATA_DIR_NAME = "FloatingTODO";
 const LEGACY_USER_DATA_DIR_NAMES = ["electron-floating-todo", "floatingtodo"];
 const DEFAULT_TASK_TITLES = ["Design System Review", "Weekly Sync Prep", "Buy Groceries"];
 const IS_MAC = process.platform === "darwin";
-const APP_ICON_PATH = path.join(__dirname, "assets", IS_MAC ? "icon.png" : "icon.ico");
+const APP_ICON_PATH = path.join(__dirname, "assets", "icon.ico");
+const TRAY_ICON_PATH = path.join(__dirname, "assets", IS_MAC ? "tray-icon.png" : "icon.ico");
 
 let mainWindow = null;
 let tray = null;
@@ -21,8 +22,13 @@ let windowFadeTimer = null;
 let windowHideTimer = null;
 
 function createTrayIcon() {
-  const assetIcon = nativeImage.createFromPath(APP_ICON_PATH);
-  if (!assetIcon.isEmpty()) return assetIcon;
+  const assetIcon = nativeImage.createFromPath(TRAY_ICON_PATH);
+  if (!assetIcon.isEmpty()) {
+    if (IS_MAC) {
+      assetIcon.setTemplateImage(true);
+    }
+    return assetIcon;
+  }
 
   const fallbackSvg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
