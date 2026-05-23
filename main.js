@@ -130,12 +130,11 @@ function setLaunchAtLogin(enabled) {
   });
 }
 
-function updateTrayMenu() {
-  if (!tray) return;
+function buildTrayMenu() {
   const windowVisible = Boolean(mainWindow?.isVisible());
   const launchAtLogin = getLaunchAtLogin();
 
-  tray.setContextMenu(Menu.buildFromTemplate([
+  return Menu.buildFromTemplate([
     {
       label: windowVisible ? "\u9690\u85cf FloatingTODO" : "\u663e\u793a FloatingTODO",
       click: () => {
@@ -161,7 +160,13 @@ function updateTrayMenu() {
         app.quit();
       }
     }
-  ]));
+  ]);
+}
+
+function updateTrayMenu() {
+  if (!tray) return;
+  if (IS_MAC) return;
+  tray.setContextMenu(buildTrayMenu());
 }
 
 function createTray() {
@@ -172,6 +177,11 @@ function createTray() {
     else showMainWindow();
     updateTrayMenu();
   });
+  if (IS_MAC) {
+    tray.on("right-click", () => {
+      tray.popUpContextMenu(buildTrayMenu());
+    });
+  }
   updateTrayMenu();
 }
 
