@@ -12,6 +12,7 @@ const LEGACY_USER_DATA_DIR_NAMES = ["electron-floating-todo", "floatingtodo"];
 const DEFAULT_TASK_TITLES = ["Design System Review", "Weekly Sync Prep", "Buy Groceries"];
 const IS_WIN = process.platform === "win32";
 const IS_MAC = process.platform === "darwin";
+const IS_LINUX = process.platform === "linux";
 const APP_ICON_PATH = path.join(__dirname, "assets", IS_WIN ? "icon.ico" : "icon.png");
 const TRAY_ICON_PATH = path.join(__dirname, "assets", IS_WIN ? "icon.ico" : "tray-icon.png");
 
@@ -48,6 +49,12 @@ function showMainWindow() {
   mainWindow.setOpacity(0);
   mainWindow.setContentSize(WINDOW_WIDTH, lastContentHeight, false);
   mainWindow.show();
+  if (IS_LINUX) {
+    const { workArea } = screen.getPrimaryDisplay();
+    const x = Math.round(workArea.x + workArea.width - WINDOW_WIDTH - 28);
+    const y = Math.round(workArea.y + 48);
+    mainWindow.setPosition(x, y);
+  }
   mainWindow.focus();
   setRendererWindowVisible(true);
   setTimeout(() => {

@@ -13,7 +13,8 @@
   "scripts": {
     "start": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue; electron .\"",
     "start:mac": "ELECTRON_RUN_AS_NODE= electron .",
-    "start:linux": "ELECTRON_RUN_AS_NODE= electron .",
+    "start:linux": "ELECTRON_RUN_AS_NODE= electron --ozone-platform=x11 .",
+    "start:linux:wayland": "ELECTRON_RUN_AS_NODE= electron --ozone-platform=wayland .",
     "check": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify.ps1",
     "smoke": "npm run check",
     "dist": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$env:ELECTRON_BUILDER_CACHE=(Join-Path $PWD '.cache/electron-builder'); electron-builder --win portable; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-exe-icon.ps1\"",
