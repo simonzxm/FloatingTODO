@@ -6,6 +6,10 @@ ipcRenderer.on("floating-todo:window-visibility", (_event, visible) => {
   }));
 });
 
+ipcRenderer.on("floating-todo:window-blur", () => {
+  window.dispatchEvent(new CustomEvent("floating-todo-window-blur"));
+});
+
 contextBridge.exposeInMainWorld("floatingTodoDesktop", {
   platform: process.platform,
   loadTasks() {

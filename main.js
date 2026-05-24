@@ -11,6 +11,7 @@ const USER_DATA_DIR_NAME = "FloatingTODO";
 const LEGACY_USER_DATA_DIR_NAMES = ["electron-floating-todo", "floatingtodo"];
 const DEFAULT_TASK_TITLES = ["Design System Review", "Weekly Sync Prep", "Buy Groceries"];
 const APP_ICON_PATH = path.join(__dirname, "assets", "icon.ico");
+const WINDOW_STATE_SAVE_DEBOUNCE_MS = 250;
 
 let mainWindow = null;
 let tray = null;
@@ -18,6 +19,13 @@ let isQuitting = false;
 let lastContentHeight = INITIAL_WINDOW_HEIGHT;
 let windowFadeTimer = null;
 let windowHideTimer = null;
+let windowStateSaveTimer = null;
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!gotSingleInstanceLock) {
+  app.quit();
+}
 
 function createTrayIcon() {
   const assetIcon = nativeImage.createFromPath(APP_ICON_PATH);
@@ -62,6 +70,11 @@ function hideMainWindow() {
 function setRendererWindowVisible(visible) {
   if (!mainWindow || mainWindow.webContents.isDestroyed()) return;
   mainWindow.webContents.send("floating-todo:window-visibility", visible);
+}
+
+function notifyRendererWindowBlur() {
+  if (!mainWindow || mainWindow.webContents.isDestroyed()) return;
+  mainWindow.webContents.send("floating-todo:window-blur");
 }
 
 function clearWindowFade() {
@@ -160,19 +173,17 @@ function createTray() {
   updateTrayMenu();
 }
 
-function createWindow() {
-  const { workArea } = screen.getPrimaryDisplay();
-  const x = Math.round(workArea.x + workArea.width - WINDOW_WIDTH - 28);
-  const y = Math.round(workArea.y + 48);
-
+async function createWindow() {
+  const bounds = await restoreWindowBounds();
+  lastContentHeight = bounds.height;
   const win = new BrowserWindow({
     width: WINDOW_WIDTH,
-    height: INITIAL_WINDOW_HEIGHT,
+    height: bounds.height,
     minWidth: WINDOW_WIDTH,
     maxWidth: WINDOW_WIDTH,
     minHeight: 240,
-    x,
-    y,
+    x: bounds.x,
+    y: bounds.y,
     frame: false,
     transparent: true,
     backgroundColor: "#00000000",
@@ -205,6 +216,9 @@ function createWindow() {
   win.once("ready-to-show", showMainWindow);
   win.on("show", updateTrayMenu);
   win.on("hide", updateTrayMenu);
+  win.on("blur", notifyRendererWindowBlur);
+  win.on("move", () => schedulePersistWindowState(win));
+  win.on("resized", () => schedulePersistWindowState(win));
   win.on("close", (event) => {
     if (isQuitting) return;
     event.preventDefault();
@@ -224,6 +238,90 @@ function getStableUserDataPath() {
 
 function getTasksFilePath() {
   return path.join(app.getPath("userData"), "tasks.json");
+}
+
+function getWindowStateFilePath() {
+  return path.join(app.getPath("userData"), "window-state.json");
+}
+
+function getDefaultWindowBounds() {
+  const { workArea } = screen.getPrimaryDisplay();
+  return {
+    width: WINDOW_WIDTH,
+    height: INITIAL_WINDOW_HEIGHT,
+    x: Math.round(workArea.x + workArea.width - WINDOW_WIDTH - 28),
+    y: Math.round(workArea.y + 48)
+  };
+}
+
+function clampWindowBounds(bounds) {
+  const defaultBounds = getDefaultWindowBounds();
+  const requestedHeight = Number(bounds?.height);
+  const requestedX = Number(bounds?.x);
+  const requestedY = Number(bounds?.y);
+  const target = {
+    ...defaultBounds,
+    ...bounds,
+    width: WINDOW_WIDTH,
+    height: Number.isFinite(requestedHeight) ? requestedHeight : defaultBounds.height,
+    x: Number.isFinite(requestedX) ? requestedX : defaultBounds.x,
+    y: Number.isFinite(requestedY) ? requestedY : defaultBounds.y
+  };
+  const display = screen.getDisplayMatching(target);
+  const { workArea } = display;
+  const maxX = workArea.x + workArea.width - WINDOW_WIDTH;
+  const maxY = workArea.y + workArea.height - Math.min(target.height, workArea.height);
+
+  return {
+    width: WINDOW_WIDTH,
+    height: Math.max(MIN_WINDOW_HEIGHT, Math.min(Math.round(target.height), workArea.height)),
+    x: Math.round(Math.max(workArea.x, Math.min(Number(target.x), maxX))),
+    y: Math.round(Math.max(workArea.y, Math.min(Number(target.y), maxY)))
+  };
+}
+
+async function restoreWindowBounds() {
+  try {
+    const raw = await fs.readFile(getWindowStateFilePath(), "utf8");
+    const parsed = JSON.parse(raw);
+    return clampWindowBounds(parsed?.bounds);
+  } catch (error) {
+    if (error?.code !== "ENOENT") console.error("Failed to restore window state:", error);
+    return getDefaultWindowBounds();
+  }
+}
+
+async function persistWindowState(win = mainWindow) {
+  if (!win || win.isDestroyed()) return false;
+  const bounds = clampWindowBounds(win.getBounds());
+  const stateFile = getWindowStateFilePath();
+  await fs.mkdir(path.dirname(stateFile), { recursive: true });
+  await fs.writeFile(
+    stateFile,
+    JSON.stringify({
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      bounds: {
+        x: bounds.x,
+        y: bounds.y,
+        width: WINDOW_WIDTH,
+        height: bounds.height
+      }
+    }, null, 2),
+    "utf8"
+  );
+  return true;
+}
+
+function schedulePersistWindowState(win = mainWindow) {
+  if (!win || win.isDestroyed()) return;
+  clearTimeout(windowStateSaveTimer);
+  windowStateSaveTimer = setTimeout(() => {
+    windowStateSaveTimer = null;
+    persistWindowState(win).catch((error) => {
+      console.error("Failed to persist window state:", error);
+    });
+  }, WINDOW_STATE_SAVE_DEBOUNCE_MS);
 }
 
 function getLegacyTasksFilePaths() {
@@ -311,25 +409,37 @@ ipcMain.on("floating-todo:resize-to-content", (event, height) => {
   const [, currentHeight] = win.getContentSize();
   if (Math.abs(currentHeight - nextHeight) < 2) return;
   win.setContentSize(WINDOW_WIDTH, nextHeight, false);
+  schedulePersistWindowState(win);
 });
 
 ipcMain.handle("floating-todo:load-tasks", async () => readPersistedTasks());
 
 ipcMain.handle("floating-todo:save-tasks", async (_event, tasks) => writePersistedTasks(tasks));
 
-app.whenReady().then(async () => {
-  app.setPath("userData", getStableUserDataPath());
-  app.setAppUserModelId("io.github.whyself.floatingtodo");
-  await migratePersistedTasks();
-  createWindow();
-  createTray();
-
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+if (gotSingleInstanceLock) {
+  app.on("second-instance", () => {
     showMainWindow();
   });
-});
+
+  app.whenReady().then(async () => {
+    app.setPath("userData", getStableUserDataPath());
+    app.setAppUserModelId("io.github.whyself.floatingtodo");
+    await migratePersistedTasks();
+    await createWindow();
+    createTray();
+
+    app.on("activate", async () => {
+      if (BrowserWindow.getAllWindows().length === 0) await createWindow();
+      showMainWindow();
+    });
+  });
+}
 
 app.on("before-quit", () => {
   isQuitting = true;
+  if (windowStateSaveTimer) {
+    clearTimeout(windowStateSaveTimer);
+    windowStateSaveTimer = null;
+  }
+  persistWindowState().catch(() => {});
 });
