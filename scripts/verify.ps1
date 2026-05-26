@@ -116,6 +116,10 @@ if ($main -notmatch "skipTaskbar:\s*true") {
   throw "main.js does not configure the widget as a tray-resident taskbar-free window"
 }
 
+if ($main -notmatch "requestSingleInstanceLock" -or $main -notmatch "second-instance") {
+  throw "main.js does not enforce a single running app instance"
+}
+
 if ($main -notmatch "\bTray\b" -or $main -notmatch "setContextMenu" -or $main -notmatch "setLoginItemSettings") {
   throw "main.js does not provide tray menu or startup toggle behavior"
 }
@@ -170,6 +174,10 @@ if ($main -notmatch 'setPath\("userData"' -or $main -notmatch "LEGACY_USER_DATA_
   throw "main.js does not pin userData or migrate legacy task files"
 }
 
+if ($main -notmatch "window-state\.json" -or $main -notmatch "persistWindowState" -or $main -notmatch "restoreWindowBounds") {
+  throw "main.js does not persist and restore the widget window position"
+}
+
 if ($scripts -notmatch "event\.altKey") {
   throw "renderer scripts do not gate window movement behind Alt"
 }
@@ -200,6 +208,10 @@ if ($scripts -notmatch "desktopResizeHoldId") {
 
 if ($scripts -notmatch "settleWidgetHeightAfterTaskIntro") {
   throw "renderer scripts do not hold window height during add-task animation"
+}
+
+if ($scripts -notmatch "handlePointerOutsideWindow" -or $scripts -notmatch "pointerleave" -or $scripts -notmatch "floating-todo-window-blur" -or $preload -notmatch "floating-todo:window-blur") {
+  throw "renderer scripts do not finalize swipe edit/delete when pointer leaves the window"
 }
 
 if ($scripts -notmatch "LIST_SHIFT_ANIMATION_MS" -or $scripts -notmatch "animateWidgetHeightAfterListShift\(previousHeight,\s*holdId\)") {

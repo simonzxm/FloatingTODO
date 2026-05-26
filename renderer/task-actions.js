@@ -173,6 +173,31 @@ function handleSwipeRelease(event) {
   return true;
 }
 
+function handlePointerOutsideWindow() {
+  if (dragState || !swipeState) return false;
+  const { element, pointerId, startX, currentX } = swipeState;
+  const transform = getComputedStyle(element).transform;
+  const previewOffset = transform && transform !== "none"
+    ? new DOMMatrixReadOnly(transform).m41
+    : 0;
+  const releaseOffset = previewOffset || (swipeState.active ? getSwipePreviewOffset(currentX - startX) : 0);
+
+  if (!swipeState.active || Math.abs(releaseOffset) < 1) {
+    resetSwipe(null);
+    return false;
+  }
+
+  resetSwipe(null, releaseOffset > 0);
+  if (taskList.hasPointerCapture(pointerId)) taskList.releasePointerCapture(pointerId);
+  suppressNextClick = true;
+
+  if (releaseOffset < 0) startEdit(element);
+  else if (element.classList.contains("subtask-row")) removeSubtask(element, releaseOffset);
+  else removeTask(element, releaseOffset);
+
+  return true;
+}
+
 function resetSwipe(event, keepTransform = false) {
   if (!swipeState) return;
   const { element, pointerId } = swipeState;

@@ -136,6 +136,7 @@ taskList.addEventListener("pointerdown", (event) => {
     type: row ? "subtask" : "task",
     startX: event.clientX,
     startY: event.clientY,
+    currentX: event.clientX,
     active: false
   };
 
@@ -156,6 +157,7 @@ taskList.addEventListener("pointerdown", (event) => {
 
 taskList.addEventListener("pointermove", (event) => {
   if (swipeState && swipeState.pointerId === event.pointerId && !dragState) {
+    swipeState.currentX = event.clientX;
     const deltaX = event.clientX - swipeState.startX;
     const deltaY = event.clientY - swipeState.startY;
 
@@ -190,6 +192,10 @@ taskList.addEventListener("pointercancel", (event) => {
   resetSwipe(event);
   finishDrag(event);
 });
+
+taskList.addEventListener("pointerleave", handlePointerOutsideWindow);
+
+window.addEventListener("floating-todo-window-blur", handlePointerOutsideWindow);
 getTaskItems().forEach(normalizeTaskSubtasks);
 ensureTaskIds();
 initializeWidgetHeight();
